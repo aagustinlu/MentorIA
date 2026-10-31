@@ -60,4 +60,4 @@ Para crear un curso debes presionar el boton, ubicado arriba a la derecha, e ing
 
 ## Licencia
 
-Este proyecto está bajo la licencia Apache 2.0
+Este proyecto está bajo la Licencia con Cláusula No Comercial. 
