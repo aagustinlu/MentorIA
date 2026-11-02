@@ -30,7 +30,7 @@ La aplicación es funcional y permite generar los cursos, pero actualmente se en
 ## Instalación y Configuración
 
 Desde la terminal debes ejecutar estos comandos en una carpeta libre de archivos.
-1. Clonar el repositorio:
+1. Clonar el repositorio (o descarga el ZIP):
    ```bash
    git clone https://github.com/aagustinlu/MentorIA.git
 
