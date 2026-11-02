@@ -5,15 +5,17 @@ from urllib.parse import unquote
 
 from PyQt6.QtCore import Qt
 
-from .TextoAutoAltura import TextoAutoAltura
 
 from pathlib import Path
+
+from .TextoAutoAltura import TextoAutoAltura
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
 
 from services.fuente_multiidioma import (
     css_fuente_multidioma,

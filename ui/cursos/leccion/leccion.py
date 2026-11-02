@@ -35,7 +35,7 @@ from ui.cursos.leccion.widgets import (
     WidgetTexto,
     WidgetTitulo,
     WidgetCodigo,
-    WidgetFormula
+    WidgetFormula,
 )
 
 

@@ -228,6 +228,7 @@ REGLAS PEDAGÓGICAS:
 - Prioriza la comprensión sobre la brevedad, incluyendo ejemplos prácticos cuando faciliten el aprendizaje.
 - Evita repeticiones innecesarias y bajo ninguna circunstancia desarrolles temas que pertenezcan a lecciones posteriores.
 - Genera código ÚNICAMENTE si el tema del curso trata explícitamente sobre programación (ej. "Curso de Python desde cero") O si el usuario solicita expresamente aprender a implementar los conceptos mediante código (ej. "Cómo calcular derivadas en Python").
+- No puedes enviar links desde HTML para mostrar imagenes.
 
 ESTRUCTURA DE SALIDA (ESQUEMA PYDANTIC):
 - Debes devolver la lección utilizando el esquema estructurado solicitado.
