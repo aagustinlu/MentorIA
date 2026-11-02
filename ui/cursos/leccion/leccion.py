@@ -31,11 +31,11 @@ from services.fuente_multiidioma import (
     registrar_fuente_multidioma
 )
 
-from ui.cursos.leccion.widgets.widgets import (
-    crear_texto,
-    crear_titulo,
-    crear_codigo,
-    crear_formula
+from ui.cursos.leccion.widgets import (
+    WidgetTexto,
+    WidgetTitulo,
+    WidgetCodigo,
+    WidgetFormula
 )
 
 
@@ -250,10 +250,10 @@ class MostrarPagina(QWidget):
         self.PaginaModel = pagina_model
 
         self.widgets = {
-            "texto": crear_texto,
-            "codigo": crear_codigo,
-            "titulo": crear_titulo,
-            "formula": crear_formula,
+            "texto": WidgetTexto,
+            "codigo": WidgetCodigo,
+            "titulo": WidgetTitulo,
+            "formula": WidgetFormula,
         }
 
         self.iniciar_ui()
