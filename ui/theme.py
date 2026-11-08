@@ -26,7 +26,7 @@ PALETAS: dict[str, dict[str, str | int]] = {
         "FONDO": "#EEE8DB",
         "SUPERFICIE": "#FAF7EF",
         "CAMPO": "#F3EEE4",
-        "HOVER": "#A8E3B8",
+        "HOVER": "#E6EBDD",
         "BORDE": "#D5CCBC",
         "BORDE_SUAVE": "#E3DCCE",
         "DESACTIVADO_FONDO": "#E7E0D4",
@@ -34,21 +34,21 @@ PALETAS: dict[str, dict[str, str | int]] = {
         # Texto
         "TEXTO": "#303630",
         "TEXTO_SUAVE": "#686C62",
-        "TEXTO_TENUE": "#89897F",
+        "TEXTO_TENUE": "#73746A",
 
-        # Acento: verde bosque natural
+        # Acento: verde salvia
         "ACENTO": "#02BD65",
         "ACENTO_HOVER": "#10AA5C",
         "ACENTO_PRESIONADO": "#179853",
-        "ACENTO_SUAVE": "#E3EDE3",
-        "ACENTO_BORDE": "#C5D7C6",
-        "ACENTO_TEXTO": "#3D674C",
-        "TEXTO_SOBRE_ACENTO": "#FFFFFF",
+        "ACENTO_SUAVE": "#DCE8D6",
+        "ACENTO_BORDE": "#B7CDB6",
+        "ACENTO_TEXTO": "#2F6B49",
+        "TEXTO_SOBRE_ACENTO": "#FBF8F1",
         "ACENTO_DESACTIVADO": "#C8D6C8",
         "TEXTO_SOBRE_ACENTO_DESACTIVADO": "#758477",
 
         # Estados
-        "COMPLETADO": "#02BD65",
+        "COMPLETADO": "#3E8F63",
         "ACTUAL": "#55768A",
         "BLOQUEADO": "#A69D89",
         "PENDIENTE": "#B18B53",
@@ -373,6 +373,31 @@ QPushButton#btnEliminarCurso:hover {{
     background-color: {C.ERROR_SUAVE};
     color: {C.ERROR};
     border-radius: 8px;
+}}
+
+QPushButton#menuConfig {{
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 14px;
+    color: {C.TEXTO_SUAVE};
+}}
+
+QPushButton#menuConfig:hover {{
+    background-color: {C.HOVER};
+    color: {C.TEXTO};
+}}
+
+QPushButton#menuConfig:checked {{
+    background-color: {C.ACENTO_SUAVE};
+    color: {C.ACENTO_TEXTO};
+    font-weight: 800;
+}}
+
+QFrame#separadorConfig {{
+    background-color: {C.BORDE_SUAVE};
+    border: none;
 }}
 
 QPushButton#BotonAdjuntar {{

@@ -17,7 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
 # ==========================================================
 # Fuentes de la aplicación
 #
-# - Huninn: fuente principal de la interfaz.
+# - SpaceGrotesk: fuente principal de la interfaz.
 # - Noto Sans JP: respaldo para japonés.
 # - Fuentes del sistema: alternativas adicionales.
 # ==========================================================
@@ -25,14 +25,14 @@ if str(PROJECT_ROOT) not in sys.path:
 CARPETA_FUENTES = PROJECT_ROOT / "files" / "fonts"
 
 
-# ── Huninn ────────────────────────────────────────────────
+# ── SpaceGrotesk ────────────────────────────────────────────────
 
 ARCHIVOS_UI = (
-    "Huninn-Regular.ttf",
+    "SpaceGrotesk-VariableFont_wght.ttf",
 )
 
-FUENTE_UI_PATH = CARPETA_FUENTES / "Huninn-Regular.ttf"
-FUENTE_UI_NOMBRE = "Huninn"
+FUENTE_UI_PATH = CARPETA_FUENTES / "SpaceGrotesk-VariableFont_wght.ttf"
+FUENTE_UI_NOMBRE = "SpaceGrotesk"
 FUENTE_UI_FAMILIA = None
 
 
@@ -177,13 +177,15 @@ def registrar_fuente_multidioma():
         FUENTE_UI_FAMILIA and FUENTE_JAPONESA_FAMILIA
     )
 
+    """
     print(
         "[Fuente] Interfaz:",
         FUENTE_UI_FAMILIA or "no cargada (se usa respaldo)",
         "| Japonés:",
         FUENTE_JAPONESA_FAMILIA or "no cargada"
     )
-
+    """
+    
     return FUENTE_UI_FAMILIA
 
 
@@ -195,7 +197,7 @@ def _lista_familias():
     """
     Devuelve las fuentes en orden de prioridad:
 
-    1. Huninno.
+    1. SpaceGrotesk.
     2. Noto Sans JP.
     3. Alternativas del sistema.
     """
