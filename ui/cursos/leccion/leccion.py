@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
 
 # Asegura que la raíz del proyecto esté en sys.path
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -38,6 +39,7 @@ from ui.cursos.leccion.widgets import (
     WidgetFormula,
 )
 
+ruta_logo = PROJECT_ROOT / "files" / "img" / "Mentoria Logo.png"
 
 # ==========================================================
 # Menú principal de la lección
@@ -66,6 +68,7 @@ class LeccionMenu(QWidget):
 
     def iniciar_ui(self):
         self.setWindowTitle("Ejemplo")
+        self.setWindowIcon(QIcon(str(ruta_logo)))
 
         # Tamaño inicial de la ventana
         self.resize(720, 580)

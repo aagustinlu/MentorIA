@@ -2,8 +2,10 @@ import sys
 from PyQt6.QtWidgets import (QApplication, QWidget, QHBoxLayout,
                              QVBoxLayout, QLabel, QPushButton, QLineEdit)
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon, QPixmap
 from services.database import BaseDatosProyecto
 from ui.theme import primario, rol, tarjeta
+
 
 
 class VentanaInicial(QWidget):
@@ -12,7 +14,8 @@ class VentanaInicial(QWidget):
         self.iniciar_ui()
 
     def iniciar_ui(self):
-        self.setWindowTitle("AsistIA")
+        self.setWindowTitle("MentorIA")
+        self.setWindowIcon(QIcon("./files/img/Mentoria Logo.png"))
         self.resize(420, 420)
 
         # Layout exterior: centra una tarjeta sobre el fondo
@@ -27,7 +30,12 @@ class VentanaInicial(QWidget):
         layout.setContentsMargins(32, 30, 32, 28)
         layout.setSpacing(6)
 
-        self.titulo = QLabel("Bienvenido a AsistIA")
+        self.logo_label = QLabel()
+        logo = QPixmap("./files/img/Mentoria Logotipo.png")
+        self.logo_label.setPixmap(logo.scaledToWidth(130, Qt.TransformationMode.SmoothTransformation))
+        self.logo_label.setScaledContents(True) 
+        
+        self.titulo = QLabel("Bienvenido a MentorIA")
         rol(self.titulo, "titulo")
 
         self.subtitulo = QLabel("Crea cursos a tu medida y estudia a tu ritmo.")
@@ -59,6 +67,9 @@ class VentanaInicial(QWidget):
         layout_token.addStretch()
         layout_token.addWidget(self.text_ayuda_token)
 
+        # Apartado del Logo
+        layout.addWidget(self.logo_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        
         # Apartado del titulo
         layout.addWidget(self.titulo)
         layout.addWidget(self.subtitulo)

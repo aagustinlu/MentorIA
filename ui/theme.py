@@ -1,31 +1,3 @@
-"""Tema visual de la aplicación (Modo Día / Modo Oscuro).
-
-Todos los colores viven en este archivo, en dos paletas:
-
-    "dia"     papel envejecido / marfil con acentos terracota y salvia en tonos
-              pastel. No hay blancos puros: el valor más claro es un crema suave.
-    "oscuro"  carbón cálido de bajo contraste (sin negro ni blanco puros).
-
-Cómo funciona el cambio en caliente
------------------------------------
-`Colores` (alias `C`) es una clase cuyos atributos se reemplazan al cambiar de
-tema, así que `C.FONDO` siempre devuelve el color del tema activo. Para que
-la interfaz se actualice sola:
-
-  1. La mayor parte del estilo vive en la hoja de estilos global (selectores por
-     `objectName` o por propiedad: `rol`, `primario`, `seleccionada`...). Al
-     cambiar de tema se regenera y se aplica a toda la aplicación.
-  2. Los widgets que pintan con colores "a mano" (mapa de nodos, HTML de las
-     lecciones, fórmulas...) se suscriben con `al_cambiar_tema(self.metodo)`.
-
-Uso:
-    from ui.theme import aplicar_tema
-    aplicar_tema(app, "oscuro")         # al arrancar (tema guardado)
-
-    from ui.theme import gestor_tema
-    gestor_tema().aplicar("dia")        # en caliente, p. ej. desde Configuración
-"""
-
 from __future__ import annotations
 
 from PyQt6.QtCore import QObject, pyqtSignal

@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
 )
-
+from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import QEvent, QSize, Qt, QThread, pyqtSignal
 
 from .popup import Configuraciones
@@ -60,7 +60,7 @@ class PanelIzquierdo(QWidget):
 
         self.db = db
         self._worker: ConsultarSaldoWorker | None = None
-
+        
         tarjeta(self)
         self.setFixedWidth(230)
 
@@ -68,6 +68,12 @@ class PanelIzquierdo(QWidget):
         layout.setContentsMargins(20, 22, 20, 20)
         layout.setSpacing(6)
 
+
+#        self.logo_label = QLabel()
+#        logo = QPixmap("./files/img/Mentoria Logo.png")
+#        self.logo_label.setPixmap(logo.scaledToWidth(120, Qt.TransformationMode.SmoothTransformation))
+#        self.logo_label.setScaledContents(True) 
+        
         self.nombre_label = QLabel(f"<b>{nombre}</b>")
         self.nombre_label.setStyleSheet("font-size: 18px;")
         self.nombre_label.setWordWrap(True)
@@ -101,7 +107,8 @@ class PanelIzquierdo(QWidget):
         # Los puntos de color del progreso van dentro de HTML: se regeneran
         # al cambiar de tema.
         al_cambiar_tema(self._al_cambiar_tema)
-
+        
+#        layout.addWidget(self.logo_label, 0, Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(self.nombre_label)
         layout.addWidget(self.subtitulo)
         layout.addSpacing(22)
@@ -411,7 +418,8 @@ class VentanaPrincipal(QWidget):
         self.iniciar_ui()
 
     def iniciar_ui(self):
-        self.setWindowTitle("AsistIA")
+        self.setWindowTitle("MentorIA")
+        self.setWindowIcon(QIcon("./files/img/Mentoria Logo.png"))
         self.resize(820, 540)
 
         perfil = self.db.obtener_perfil()
@@ -431,10 +439,15 @@ class VentanaPrincipal(QWidget):
             "cursos_pendientes", 0
         )
 
-        layout_principal = QHBoxLayout()
-        layout_principal.setContentsMargins(22, 22, 22, 22)
-        layout_principal.setSpacing(20)
-
+        
+        # Generar el lado izquierdo del layout principal
+        # > Se crea el logo
+        self.logo_label = QLabel()
+        logo = QPixmap("./files/img/Mentoria Logotipo.png")
+        self.logo_label.setPixmap(logo.scaledToWidth(180, Qt.TransformationMode.SmoothTransformation))
+        self.logo_label.setScaledContents(True) 
+        
+        
         self.panel_izquierdo = PanelIzquierdo(
             nombre_bd,
             cursos_completados,
@@ -442,12 +455,22 @@ class VentanaPrincipal(QWidget):
             self.db,
             stats.get("lecciones_completadas", 0),
         )
+        
+        self.layout_izquierdo = QVBoxLayout()
+        self.layout_izquierdo.addWidget(self.logo_label)
+        self.layout_izquierdo.addWidget(self.panel_izquierdo)
 
+        # Generar el lado derecho del layout principal
         self.panel_derecho = PanelDerecho(self.db)
         self.panel_derecho.cargar_cursos()
-
-        layout_principal.addWidget(
-            self.panel_izquierdo,
+        
+        # Generar el layout completo
+        layout_principal = QHBoxLayout()
+        layout_principal.setContentsMargins(22, 22, 22, 22)
+        layout_principal.setSpacing(20)
+        
+        layout_principal.addLayout(
+            self.layout_izquierdo,
         )
 
         layout_principal.addWidget(

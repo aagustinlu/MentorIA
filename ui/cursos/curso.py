@@ -2,10 +2,8 @@ import sys
 import random
 from pathlib import Path
 
-# Asegura que el proyecto raíz esté en sys.path para imports absolutos
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+
+
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -22,11 +20,17 @@ from PyQt6.QtWidgets import (
     QProgressDialog,
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QBrush, QColor, QPainter, QPen
+from PyQt6.QtGui import QBrush, QColor, QPainter, QPen, QIcon
+
+# Asegura que el proyecto raíz esté en sys.path para imports absolutos
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from models.models import CursoModel, LeccionModel
 from ui.theme import Colores as C, al_cambiar_tema, rol, tarjeta
 
+ruta_logo = PROJECT_ROOT / "files" / "img" / "Mentoria Logo.png"
 
 def _parsear_curso_para_ui(curso_data) -> CursoModel:
     """Normaliza datos (dict o CursoModel) al esquema de dominio."""
@@ -714,6 +718,7 @@ class CursoMenu(QWidget):
 
     def iniciar_ui(self):
         self.setWindowTitle(f"Curso: {self.titulo}")
+        self.setWindowIcon(QIcon(str(ruta_logo)))
         self.resize(860, 600)
 
         layout_principal = QHBoxLayout()
