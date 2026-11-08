@@ -1,5 +1,5 @@
 import sys
-import time
+from functools import lru_cache
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -11,40 +11,193 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMessageBox,
+    QSizePolicy,
+    QStyledItemDelegate,
 )
-from PyQt6.QtGui import QPixmap, QIcon
-from PyQt6.QtCore import QEvent, QSize, Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QCursor, QIcon, QPainter, QPixmap
+from PyQt6.QtCore import (
+    QByteArray,
+    QEvent,
+    QRectF,
+    QSize,
+    Qt,
+    pyqtSignal,
+)
+from PyQt6.QtSvg import QSvgRenderer
 
 from .popup import Configuraciones
 from .cursos.crear_curso_menu import CampoEntrada
-from .theme import Colores as C, al_cambiar_tema, fs, primario, rol, tarjeta
+from .theme import Colores as C, al_cambiar_tema, fs, gestor_tema, primario, rol, tarjeta
 from services.database import BaseDatosProyecto
 
 from .cursos.curso import CursoMenu
 
 
-class ConsultarSaldoWorker(QThread):
-    """Consulta el saldo de Groq en segundo plano (es una llamada de red)."""
+# Ícono de tacho dibujado como vector: se ve nítido a cualquier tamaño y no
+# arrastra fondo de color como una captura.
+_SVG_TACHO = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+     stroke="{color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M3 6h18"/>
+  <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/>
+  <path d="M6 6l1 14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-14"/>
+  <path d="M10 11v6M14 11v6"/>
+</svg>"""
 
-    resultado = pyqtSignal(object)   # SaldoGroq o None
 
-    def __init__(self, api_key):
+@lru_cache(maxsize=None)
+def icono_tacho(color: str, lado: int = 18) -> QIcon:
+    renderer = QSvgRenderer(QByteArray(_SVG_TACHO.format(color=color).encode()))
+    pixmap = QPixmap(lado * 2, lado * 2)      # 2x para pantallas de alta densidad
+    pixmap.setDevicePixelRatio(2.0)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter, QRectF(0, 0, lado, lado))
+    painter.end()
+    return QIcon(pixmap)
+
+
+class BotonTacho(QPushButton):
+    """Botón con ícono de tacho: el círculo se marca solo al hacer hover.
+
+    Tiene dos paletas (fondo claro / fondo oscuro) para que el ícono siempre se vea.
+    """
+
+    LADO = 32            # el botón es un cuadrado de LADO x LADO
+    RADIO = 16           # LADO/2 = círculo; 8 = cuadrado de esquinas redondeadas
+    ICONO = 16
+
+    # fondo oscuro? -> (color en reposo, color al apuntar, RGB del fondo al apuntar)
+    PALETAS = {
+        False: ("#8f8579", "#c0564b", "192, 86, 75"),
+        True: ("#d6cdc0", "#f0897c", "240, 137, 124"),
+    }
+
+    def __init__(self):
         super().__init__()
-        self.api_key = api_key
+        self.setObjectName("btnEliminarIcono")
+        self.setIconSize(QSize(self.ICONO, self.ICONO))
+        self.setFixedSize(self.LADO, self.LADO)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip("Eliminar este curso")
+        self._oscuro: bool | None = None
+        self.usar_modo_oscuro(False)
 
-    def run(self):
-        try:
-            from services.ai_service import GestorDeIA
+    def usar_modo_oscuro(self, oscuro: bool):
+        if oscuro == self._oscuro:
+            return
+        self._oscuro = oscuro
+        self._reposo, self._hover, rgb = self.PALETAS[oscuro]
+        self.setIcon(icono_tacho(self._reposo, self.ICONO))
+        # Sin fondo ni borde en reposo; el círculo aparece solo al apuntar el botón
+        self.setStyleSheet(
+            "QPushButton#btnEliminarIcono {"
+            " background: transparent;"
+            " border: none;"
+            f" border-radius: {self.RADIO}px;"
+            " padding: 0; margin: 0; min-width: 0; min-height: 0; }"
+            "QPushButton#btnEliminarIcono:hover {"
+            f" background: rgba({rgb}, 40); }}"
+        )
 
-            self.resultado.emit(GestorDeIA(api_key=self.api_key).consultar_saldo())
-        except Exception as e:
-            print(f"[ConsultarSaldoWorker] {e}")
-            self.resultado.emit(None)
+    def enterEvent(self, event):
+        self.setIcon(icono_tacho(self._hover, self.ICONO))
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.setIcon(icono_tacho(self._reposo, self.ICONO))
+        super().leaveEvent(event)
+
+    def hideEvent(self, event):
+        self.setIcon(icono_tacho(self._reposo, self.ICONO))
+        super().hideEvent(event)
 
 
-def _fmt(n) -> str:
-    """12345 -> '12.345'"""
-    return "—" if n is None else f"{n:,}".replace(",", ".")
+class FilaCurso(QWidget):
+    """Fila de un curso: el título y un tacho que solo aparece con el mouse encima."""
+
+    eliminar_pedido = pyqtSignal(int, str)   # id y título del curso
+
+    MARGEN_IZQ = 14
+    MARGEN_DER = 8
+
+    def __init__(self, curso_id: int, titulo: str):
+        super().__init__()
+        self.curso_id = curso_id
+        self.titulo = titulo
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+
+        self._layout = QHBoxLayout(self)
+        layout = self._layout
+        layout.setContentsMargins(self.MARGEN_IZQ, 0, self.MARGEN_DER, 0)
+        layout.setSpacing(8)
+
+        etiqueta = QLabel(titulo)
+        etiqueta.setStyleSheet(f"font-size: {fs(14)}px;")
+        # Deja pasar el clic para que seleccionar la fila siga abriendo el curso
+        etiqueta.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+
+        self.btn_eliminar = BotonTacho()
+        # Oculto por defecto, pero conservando su lugar para que el título no salte
+        politica = self.btn_eliminar.sizePolicy()
+        politica.setRetainSizeWhenHidden(True)
+        self.btn_eliminar.setSizePolicy(politica)
+        self.btn_eliminar.hide()
+        self.btn_eliminar.clicked.connect(
+            lambda _checked=False: self.eliminar_pedido.emit(self.curso_id, self.titulo)
+        )
+
+        layout.addWidget(etiqueta, 1)
+        layout.addWidget(self.btn_eliminar)
+
+    def enterEvent(self, event):
+        self._mostrar_tacho(True)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.btn_eliminar.setVisible(False)
+        super().leaveEvent(event)
+
+    def ajustar_margenes(self, extra_izq: int, extra_der: int):
+        """Suma margen interno para que el contenido no cambie de lugar cuando la
+        fila se agranda hasta cubrir todo el rectángulo del item."""
+        izq = self.MARGEN_IZQ + max(0, extra_izq)
+        der = self.MARGEN_DER + max(0, extra_der)
+        if (izq, der) != (self._layout.contentsMargins().left(),
+                          self._layout.contentsMargins().right()):
+            self._layout.setContentsMargins(izq, 0, der, 0)
+
+    def sincronizar_hover(self):
+        """Muestra el tacho solo si el mouse realmente está sobre la fila."""
+        pos = self.mapFromGlobal(QCursor.pos())
+        self._mostrar_tacho(self.rect().contains(pos))
+
+    def _mostrar_tacho(self, visible: bool):
+        if visible:
+            self.btn_eliminar.usar_modo_oscuro(gestor_tema().es_oscuro)
+        self.btn_eliminar.setVisible(visible)
+
+
+class DelegadoFilaCurso(QStyledItemDelegate):
+    """Hace que la fila ocupe TODO el rectángulo del item.
+
+    Por defecto Qt acota el widget de la fila al área del texto (descontando el
+    padding/margen del estilo), mientras que el resaltado del item sí llega hasta
+    los bordes: ahí el mouse estaba sobre el item pero no sobre la fila y el tacho
+    no aparecía. Con la fila cubriendo todo el item, el hover funciona hasta los
+    extremos.
+    """
+
+    def updateEditorGeometry(self, editor, option, index):
+        super().updateEditorGeometry(editor, option, index)   # rect del texto
+        if not isinstance(editor, FilaCurso):
+            return
+        interior = editor.geometry()
+        total = option.rect
+        editor.ajustar_margenes(
+            interior.left() - total.left(),
+            total.right() - interior.right(),
+        )
+        editor.setGeometry(total)
 
 
 class PanelIzquierdo(QWidget):
@@ -59,7 +212,6 @@ class PanelIzquierdo(QWidget):
         super().__init__()
 
         self.db = db
-        self._worker: ConsultarSaldoWorker | None = None
         
         tarjeta(self)
         self.setFixedWidth(250)
@@ -68,12 +220,6 @@ class PanelIzquierdo(QWidget):
         layout.setContentsMargins(20, 22, 20, 20)
         layout.setSpacing(6)
 
-
-#        self.logo_label = QLabel()
-#        logo = QPixmap("./files/img/Mentoria Logo.png")
-#        self.logo_label.setPixmap(logo.scaledToWidth(120, Qt.TransformationMode.SmoothTransformation))
-#        self.logo_label.setScaledContents(True) 
-        
         self.nombre_label = QLabel(f"<b>{nombre}</b>")
         self.nombre_label.setStyleSheet(f"font-size: {fs(18)}px;")
         self.nombre_label.setWordWrap(True)
@@ -91,15 +237,6 @@ class PanelIzquierdo(QWidget):
             cursos_completados, cursos_pendientes, lecciones_completadas
         )
 
-        self.titulo_saldo = QLabel("DISPONIBLE")
-        rol(self.titulo_saldo, "seccion")
-
-        self.tokens_disponible = QLabel("Tokens este minuto: …")
-        rol(self.tokens_disponible, "subtitulo")
-
-        self.solicitudes_disponibles = QLabel("Solicitudes hoy: …")
-        rol(self.solicitudes_disponibles, "subtitulo")
-
         self.btn_config = QPushButton("Configuración")
         self.btn_config.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_config.clicked.connect(self.mostrar_confg)
@@ -107,8 +244,7 @@ class PanelIzquierdo(QWidget):
         # Los puntos de color del progreso van dentro de HTML: se regeneran
         # al cambiar de tema.
         al_cambiar_tema(self._al_cambiar_tema)
-        
-#        layout.addWidget(self.logo_label, 0, Qt.AlignmentFlag.AlignHCenter)
+
         layout.addWidget(self.nombre_label)
         layout.addWidget(self.subtitulo)
         layout.addSpacing(22)
@@ -117,11 +253,6 @@ class PanelIzquierdo(QWidget):
         layout.addWidget(self.texto_cursos_completados)
         layout.addWidget(self.texto_cursos_pendientes)
         layout.addWidget(self.texto_lecciones_completadas)
-        layout.addSpacing(18)
-        layout.addWidget(self.titulo_saldo)
-        layout.addSpacing(2)
-        layout.addWidget(self.tokens_disponible)
-        layout.addWidget(self.solicitudes_disponibles)
         layout.addStretch()
 
         layout.addWidget(self.btn_config)
@@ -161,33 +292,6 @@ class PanelIzquierdo(QWidget):
             stats.get("lecciones_completadas", 0),
         )
 
-    def actualizar_saldo(self):
-        """Pide el saldo a Groq sin bloquear la UI. Seguro de llamar varias veces."""
-        if self.db is None or (self._worker and self._worker.isRunning()):
-            return
-
-        perfil = self.db.obtener_perfil()
-        api_key = perfil[1] if perfil else None
-        if not api_key:
-            return
-
-        self._worker = ConsultarSaldoWorker(api_key)
-        self._worker.resultado.connect(self._mostrar_saldo)
-        self._worker.start()
-
-    def _mostrar_saldo(self, saldo):
-        if saldo is None:
-            self.tokens_disponible.setText("Saldo no disponible")
-            self.solicitudes_disponibles.setText("")
-            return
-
-        # Si Groq envía el límite diario de tokens se muestra; si no, el del minuto
-        if saldo.tokens_dia is not None:
-            self.tokens_disponible.setText(f"Tokens hoy: {_fmt(saldo.tokens_dia)}")
-        else:
-            self.tokens_disponible.setText(f"Tokens este minuto: {_fmt(saldo.tokens_minuto)}")
-        self.solicitudes_disponibles.setText(f"Solicitudes hoy: {_fmt(saldo.solicitudes_dia)}")
-
     @staticmethod
     def _fila(color: str, texto: str) -> str:
         return f"<span style='color:{color};'>●</span>&nbsp;&nbsp;{texto}"
@@ -221,6 +325,7 @@ class PanelDerecho(QWidget):
 
         self.lista_cursos = QListWidget()
         self.lista_cursos.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.lista_cursos.setItemDelegate(DelegadoFilaCurso(self.lista_cursos))
         self.lista_cursos.itemSelectionChanged.connect(
             self._on_seleccion_curso
         )
@@ -259,32 +364,16 @@ class PanelDerecho(QWidget):
             self.lista_cursos.setItemWidget(item, fila)
 
     def _crear_fila_curso(self, curso_id: int, titulo: str) -> QWidget:
-        fila = QWidget()
-        fila.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-
-        layout = QHBoxLayout(fila)
-        layout.setContentsMargins(14, 0, 8, 0)
-        layout.setSpacing(8)
-
-        etiqueta = QLabel(titulo)
-        etiqueta.setStyleSheet(f"font-size: {fs(14)}px;")
-        # Deja pasar el clic para que seleccionar la fila siga abriendo el curso
-        etiqueta.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-
-        btn_eliminar = QPushButton("Eliminar")
-        btn_eliminar.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_eliminar.setToolTip("Eliminar este curso")
-        # Estilo en la hoja global (ver theme.py): sigue al tema solo
-        btn_eliminar.setObjectName("btnEliminarCurso")
-        btn_eliminar.clicked.connect(
-            lambda _checked=False, cid=curso_id, t=titulo: self._confirmar_eliminar_curso(cid, t)
+        fila = FilaCurso(curso_id, titulo)
+        fila.eliminar_pedido.connect(
+            lambda cid, t, f=fila: self._confirmar_eliminar_curso(cid, t, f)
         )
-
-        layout.addWidget(etiqueta, 1)
-        layout.addWidget(btn_eliminar)
         return fila
 
-    def _confirmar_eliminar_curso(self, curso_id: int, titulo: str):
+
+    def _confirmar_eliminar_curso(
+        self, curso_id: int, titulo: str, fila: FilaCurso | None = None
+    ):
         caja = QMessageBox(self)
         caja.setIcon(QMessageBox.Icon.Warning)
         caja.setWindowTitle("Eliminar curso")
@@ -300,6 +389,9 @@ class PanelDerecho(QWidget):
         caja.exec()
 
         if caja.clickedButton() is not btn_eliminar:
+            # Con el diálogo abierto el mouse pudo salir de la fila
+            if fila is not None:
+                fila.sincronizar_hover()
             return
 
         self._eliminar_curso(curso_id)
@@ -395,17 +487,14 @@ class PanelDerecho(QWidget):
         # (necesario para poder abrirlas desde el mapa de nodos).
         curso = popup_menu_curso.curso_creado
 
-        # La generación gastó tokens: actualizamos el saldo mostrado
-        panel = getattr(self.window(), "panel_izquierdo", None)
-        if panel is not None:
-            panel.actualizar_saldo()
-
         if curso is not None:
             curso_bd = self.db.obtener_curso(curso.id) if curso.id else None
             self._mostrar_curso_menu(curso_bd or curso)
 
 
 class VentanaPrincipal(QWidget):
+    ANCHO_LOGO = 180   # px lógicos; el panel izquierdo mide 250
+
     def __init__(self, nombre: str):
         super().__init__()
 
@@ -439,15 +528,22 @@ class VentanaPrincipal(QWidget):
             "cursos_pendientes", 0
         )
 
-        
         # Generar el lado izquierdo del layout principal
-        # > Se crea el logo
+        # > Se crea el logo: proporcional (sin setScaledContents) y centrado
         self.logo_label = QLabel()
+        self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.logo_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
+        )
         logo = QPixmap("./files/img/Mentoria Logotipo.png")
-        self.logo_label.setPixmap(logo.scaledToWidth(180, Qt.TransformationMode.SmoothTransformation))
-        self.logo_label.setScaledContents(True) 
-        
-        
+        if not logo.isNull():
+            dpr = self.devicePixelRatioF()
+            logo = logo.scaledToWidth(
+                int(self.ANCHO_LOGO * dpr), Qt.TransformationMode.SmoothTransformation
+            )
+            logo.setDevicePixelRatio(dpr)
+            self.logo_label.setPixmap(logo)
+
         self.panel_izquierdo = PanelIzquierdo(
             nombre_bd,
             cursos_completados,
@@ -455,10 +551,12 @@ class VentanaPrincipal(QWidget):
             self.db,
             stats.get("lecciones_completadas", 0),
         )
-        
+
         self.layout_izquierdo = QVBoxLayout()
-        self.layout_izquierdo.addWidget(self.logo_label)
-        self.layout_izquierdo.addWidget(self.panel_izquierdo)
+        self.layout_izquierdo.addWidget(
+            self.logo_label, 0, Qt.AlignmentFlag.AlignHCenter
+        )
+        self.layout_izquierdo.addWidget(self.panel_izquierdo, 1)
 
         # Generar el lado derecho del layout principal
         self.panel_derecho = PanelDerecho(self.db)
@@ -480,35 +578,15 @@ class VentanaPrincipal(QWidget):
 
         self.setLayout(layout_principal)
 
-        # Para no consultar a Groq cada vez que la ventana recupera el foco
-        self._ultimo_saldo = 0.0
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        self._refrescar_saldo(minimo_segundos=0)
-
     def event(self, e):
-        # Al volver a esta ventana (p. ej. tras cerrar una lección) se refresca el saldo
+        # Al volver a esta ventana (p. ej. tras cerrar una lección) se actualiza el progreso
         if e.type() == QEvent.Type.WindowActivate:
-            self._refrescar_saldo(minimo_segundos=30)
             self.panel_izquierdo.refrescar_progreso()
         return super().event(e)
-
-    def _refrescar_saldo(self, minimo_segundos: int):
-        ahora = time.monotonic()
-        if ahora - self._ultimo_saldo >= minimo_segundos:
-            self._ultimo_saldo = ahora
-            self.panel_izquierdo.actualizar_saldo()
 
     def closeEvent(self, event):
         # Al cerrar la ventana principal se cierran también curso y lecciones abiertos
         QApplication.closeAllWindows()
-
-        # Evita destruir el hilo del saldo si aún está consultando
-        worker = self.panel_izquierdo._worker
-        if worker is not None and worker.isRunning():
-            worker.wait(3000)
-
         super().closeEvent(event)
 
 

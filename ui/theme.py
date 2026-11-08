@@ -26,7 +26,7 @@ PALETAS: dict[str, dict[str, str | int]] = {
         "FONDO": "#EEE8DB",
         "SUPERFICIE": "#FAF7EF",
         "CAMPO": "#F3EEE4",
-        "HOVER": "#E8E1D4",
+        "HOVER": "#A8E3B8",
         "BORDE": "#D5CCBC",
         "BORDE_SUAVE": "#E3DCCE",
         "DESACTIVADO_FONDO": "#E7E0D4",
@@ -37,9 +37,9 @@ PALETAS: dict[str, dict[str, str | int]] = {
         "TEXTO_TENUE": "#89897F",
 
         # Acento: verde bosque natural
-        "ACENTO": "#47775C",
-        "ACENTO_HOVER": "#3F6B50",
-        "ACENTO_PRESIONADO": "#365C45",
+        "ACENTO": "#02BD65",
+        "ACENTO_HOVER": "#10AA5C",
+        "ACENTO_PRESIONADO": "#179853",
         "ACENTO_SUAVE": "#E3EDE3",
         "ACENTO_BORDE": "#C5D7C6",
         "ACENTO_TEXTO": "#3D674C",
@@ -48,7 +48,7 @@ PALETAS: dict[str, dict[str, str | int]] = {
         "TEXTO_SOBRE_ACENTO_DESACTIVADO": "#758477",
 
         # Estados
-        "COMPLETADO": "#668267",
+        "COMPLETADO": "#02BD65",
         "ACTUAL": "#55768A",
         "BLOQUEADO": "#A69D89",
         "PENDIENTE": "#B18B53",
@@ -77,7 +77,7 @@ PALETAS: dict[str, dict[str, str | int]] = {
         "FONDO": "#202522",
         "SUPERFICIE": "#292F2B",
         "CAMPO": "#1C221F",
-        "HOVER": "#343B35",
+        "HOVER": "#01743E",
         "BORDE": "#414941",
         "BORDE_SUAVE": "#353D37",
         "DESACTIVADO_FONDO": "#252B27",
@@ -87,19 +87,18 @@ PALETAS: dict[str, dict[str, str | int]] = {
         "TEXTO_SUAVE": "#B5B7AA",
         "TEXTO_TENUE": "#858C80",
 
-        # Acento: naranja tostado
-        "ACENTO": "#35B879",
-        "ACENTO_HOVER": "#43C789",
-        "ACENTO_PRESIONADO": "#279B65",
+        "ACENTO": "#02BD65",
+        "ACENTO_HOVER": "#10AA5C",
+        "ACENTO_PRESIONADO": "#179853",
         "ACENTO_SUAVE": "#293C32",
         "ACENTO_BORDE": "#426B53",
         "ACENTO_TEXTO": "#65D39B",
-        "TEXTO_SOBRE_ACENTO": "#14251B",
+        "TEXTO_SOBRE_ACENTO": "#E8E5DA",
         "ACENTO_DESACTIVADO": "#3C5747",
         "TEXTO_SOBRE_ACENTO_DESACTIVADO": "#91A99A",
 
         # Estados
-        "COMPLETADO": "#8EB18A",
+        "COMPLETADO": "#34AD60",
         "ACTUAL": "#80A9C5",
         "BLOQUEADO": "#625F55",
         "PENDIENTE": "#D0AA63",
