@@ -41,7 +41,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from models.models import ExamenModel
 from services.examen_service import PORCENTAJE_APROBACION, ResultadoExamen, SesionExamen
-from ui.theme import Colores as C, primario, rol, tarjeta
+from ui.theme import Colores as C, al_cambiar_tema, primario, repulir, rol, tarjeta
 
 
 PAGINA_INICIO, PAGINA_PREGUNTAS, PAGINA_RESULTADOS = 0, 1, 2
@@ -73,8 +73,10 @@ def _crear_scroll(contenido: QWidget) -> QScrollArea:
     scroll.setFrameShape(QScrollArea.Shape.NoFrame)
     scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
     scroll.viewport().setAutoFillBackground(False)
-    contenido.setAutoFillBackground(False)
     scroll.setWidget(contenido)
+    # Después de setWidget(): Qt lo reactiva ahí y pintaría un rectángulo del
+    # color de la ventana sobre la tarjeta.
+    contenido.setAutoFillBackground(False)
     return scroll
 
 
@@ -89,15 +91,8 @@ def _crear_codigo(codigo: str) -> QPlainTextEdit:
 
     widget.setPlainText(codigo)
     widget.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
-    widget.setStyleSheet(f"""
-        QPlainTextEdit {{
-            background: {C.CODIGO_FONDO};
-            color: {C.CODIGO_TEXTO};
-            border: none;
-            border-radius: 10px;
-            padding: 10px;
-        }}
-    """)
+    # Colores en la hoja global (theme.py): siguen al tema solos
+    widget.setObjectName("codigoBloque")
 
     lineas = max(1, widget.document().blockCount())
     widget.setFixedHeight(min(lineas * widget.fontMetrics().lineSpacing() + 36, 220))
@@ -146,7 +141,7 @@ class OpcionRespuesta(QFrame):
 
         self.lbl_letra = QLabel(letra)
         self.lbl_letra.setFixedWidth(20)
-        self.lbl_letra.setStyleSheet(f"font-weight: 600; color: {C.TEXTO_SUAVE};")
+        rol(self.lbl_letra, "letra")
         # El clic debe llegar al marco, no quedarse en las etiquetas
         self.lbl_letra.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
@@ -162,19 +157,9 @@ class OpcionRespuesta(QFrame):
         self.set_seleccionada(False)
 
     def set_seleccionada(self, seleccionada: bool) -> None:
-        if seleccionada:
-            estilo = (
-                f"QFrame#opcion {{ background-color: {C.ACENTO_SUAVE}; "
-                f"border: 2px solid {C.ACENTO}; border-radius: 10px; }}"
-            )
-        else:
-            estilo = (
-                f"QFrame#opcion {{ background-color: {C.SUPERFICIE}; "
-                f"border: 1px solid {C.BORDE}; border-radius: 10px; }}"
-                f"QFrame#opcion:hover {{ border-color: {C.ACENTO_BORDE}; "
-                f"background-color: #F7F9FB; }}"
-            )
-        self.setStyleSheet(estilo)
+        # El aspecto de cada estado está en la hoja global (theme.py)
+        self.setProperty("seleccionada", seleccionada)
+        repulir(self)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -205,8 +190,13 @@ class ExamenMenu(QWidget):
         self.indice = 0
         self.opciones_ui: list[OpcionRespuesta] = []
         self._en_curso = False
+        self._ultimo_resultado: ResultadoExamen | None = None
 
         self.iniciar_ui()
+
+        # La pantalla de resultados lleva marcas ✓/✗ coloreadas dentro de HTML:
+        # se regenera al cambiar de tema.
+        al_cambiar_tema(self._al_cambiar_tema)
 
     # ------------------------------------------------------
     # Construcción de la interfaz
@@ -258,7 +248,8 @@ class ExamenMenu(QWidget):
             "Antes de finalizar puedes volver atrás y cambiar tus respuestas."
         )
         info.setWordWrap(True)
-        info.setStyleSheet(f"color: {C.TEXTO_SUAVE}; font-size: 14px;")
+        rol(info, "suave")
+        info.setStyleSheet("font-size: 14px;")
 
         layout.addWidget(etiqueta)
         layout.addWidget(titulo)
@@ -469,7 +460,15 @@ class ExamenMenu(QWidget):
     # Resultados
     # ------------------------------------------------------
 
+    def _al_cambiar_tema(self, _nombre: str = "") -> None:
+        if (
+            self._ultimo_resultado is not None
+            and self.pila.currentIndex() == PAGINA_RESULTADOS
+        ):
+            self._mostrar_resultados(self._ultimo_resultado)
+
     def _mostrar_resultados(self, resultado: ResultadoExamen) -> None:
+        self._ultimo_resultado = resultado
         layout = self.layout_resultados
         _vaciar(layout)
 
@@ -480,16 +479,17 @@ class ExamenMenu(QWidget):
         puntaje.setStyleSheet("font-size: 26px; font-weight: 600;")
 
         if resultado.aprobado:
-            texto, color = "✓ ¡Aprobado! Completaste el curso.", C.COMPLETADO
+            texto, rol_veredicto = "✓ ¡Aprobado! Completaste el curso.", "ok"
         else:
             texto = (
                 f"No alcanzaste el {PORCENTAJE_APROBACION}% necesario. "
                 "Repasa los temas indicados e inténtalo de nuevo."
             )
-            color = C.ERROR
+            rol_veredicto = "error"
         veredicto = QLabel(texto)
         veredicto.setWordWrap(True)
-        veredicto.setStyleSheet(f"color: {color}; font-size: 15px; font-weight: 600;")
+        rol(veredicto, rol_veredicto)
+        veredicto.setStyleSheet("font-size: 15px;")
 
         layout.addWidget(etiqueta)
         layout.addWidget(puntaje)
@@ -504,7 +504,8 @@ class ExamenMenu(QWidget):
                 layout.addWidget(self._crear_revision(revision))
         else:
             perfecto = QLabel("Respondiste todas las preguntas correctamente.")
-            perfecto.setStyleSheet(f"color: {C.TEXTO_SUAVE}; font-size: 14px;")
+            rol(perfecto, "suave")
+            perfecto.setStyleSheet("font-size: 14px;")
             layout.addWidget(perfecto)
 
         layout.addStretch(1)
@@ -514,11 +515,7 @@ class ExamenMenu(QWidget):
         pregunta = revision.pregunta
 
         marco = QFrame()
-        marco.setObjectName("revision")
-        marco.setStyleSheet(
-            f"QFrame#revision {{ background-color: {C.FONDO}; "
-            f"border: 1px solid {C.BORDE_SUAVE}; border-radius: 10px; }}"
-        )
+        marco.setObjectName("revision")  # aspecto en la hoja global (theme.py)
 
         layout = QVBoxLayout(marco)
         layout.setContentsMargins(14, 12, 14, 12)
@@ -534,7 +531,7 @@ class ExamenMenu(QWidget):
                 f"Tu respuesta: {escape(revision.elegida)}"
             )
         correcta = (
-            f"<span style='color:{C.COMPLETADO};'>✓</span> "
+            f"<span style='color:{C.OK_TEXTO};'>✓</span> "
             f"Correcta: {escape(revision.correcta)}"
         )
         for html in (tu_respuesta, correcta):
@@ -548,14 +545,16 @@ class ExamenMenu(QWidget):
             explicacion = QLabel(pregunta.explicacion)
             explicacion.setTextFormat(Qt.TextFormat.PlainText)
             explicacion.setWordWrap(True)
-            explicacion.setStyleSheet(f"color: {C.TEXTO_SUAVE}; font-size: 13px;")
+            rol(explicacion, "suave")
+            explicacion.setStyleSheet("font-size: 13px;")
             layout.addWidget(explicacion)
 
         if pregunta.leccion_titulo:
             repasar = QLabel(f"Repasar: {pregunta.leccion_titulo}")
             repasar.setTextFormat(Qt.TextFormat.PlainText)
             repasar.setWordWrap(True)
-            repasar.setStyleSheet(f"color: {C.ACENTO}; font-size: 12px; font-weight: 600;")
+            rol(repasar, "acento")
+            repasar.setStyleSheet("font-size: 12px; font-weight: 600;")
             layout.addWidget(repasar)
 
         return marco

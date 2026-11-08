@@ -35,6 +35,10 @@ class BaseDatosProyecto:
         """Abre la conexión con SQLite."""
         return sqlite3.connect(str(self.ruta_completa))
 
+    def conectar(self) -> sqlite3.Connection:
+        """Abre una conexión con SQLite (API pública para los repositories)."""
+        return self._conectar()
+
     def inicializar_tablas(self):
         """Crea las tablas si no existen y actualiza columnas faltantes."""
         
@@ -112,6 +116,12 @@ class BaseDatosProyecto:
                 correcta INTEGER NOT NULL,
                 explicacion TEXT,
                 FOREIGN KEY(exam_id) REFERENCES exams(id)
+            );
+            ''',
+            '''
+            CREATE TABLE IF NOT EXISTS ajustes (
+                clave TEXT PRIMARY KEY,
+                valor TEXT NOT NULL
             );
             ''',
             '''
@@ -283,6 +293,35 @@ class BaseDatosProyecto:
             return False
     
         
+    # --- Ajustes de la aplicación (tema, etc.) ---
+
+    def obtener_ajuste(self, clave: str, defecto: str | None = None) -> str | None:
+        """Devuelve el valor guardado para `clave`, o `defecto` si no existe."""
+        try:
+            with self._conectar() as conexion:
+                cursor = conexion.cursor()
+                cursor.execute("SELECT valor FROM ajustes WHERE clave = ?", (clave,))
+                fila = cursor.fetchone()
+                return fila[0] if fila else defecto
+        except sqlite3.Error as e:
+            print(f"Error al leer el ajuste '{clave}': {e}")
+            return defecto
+
+    def guardar_ajuste(self, clave: str, valor: str) -> bool:
+        """Crea o actualiza un ajuste de la aplicación."""
+        try:
+            with self._conectar() as conexion:
+                cursor = conexion.cursor()
+                cursor.execute(
+                    "INSERT OR REPLACE INTO ajustes (clave, valor) VALUES (?, ?)",
+                    (clave, valor),
+                )
+                conexion.commit()
+                return True
+        except sqlite3.Error as e:
+            print(f"Error al guardar el ajuste '{clave}': {e}")
+            return False
+
     # --- Lectura de los datos
     
     def obtener_perfil(self):
@@ -843,6 +882,3 @@ if __name__ == "__main__":
 
     print("Cursos:", db.obtener_cursos_usuario())
     
-
-# Alias para compatibilidad con los repositories
-BaseDatos = BaseDatosProyecto

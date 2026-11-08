@@ -25,7 +25,7 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QBrush, QColor, QPainter, QPen
 
 from models.models import CursoModel, LeccionModel
-from ui.theme import Colores as C, rol, tarjeta
+from ui.theme import Colores as C, al_cambiar_tema, rol, tarjeta
 
 
 def _parsear_curso_para_ui(curso_data) -> CursoModel:
@@ -238,7 +238,7 @@ class NodoCircular(QGraphicsEllipseItem):
             fuente = self.marca.font()
             fuente.setPixelSize(int(radio))
             self.marca.setFont(fuente)
-            self.marca.setBrush(QBrush(QColor("#FFFFFF")))
+            self.marca.setBrush(QBrush(QColor(C.TEXTO_SOBRE_ACENTO)))
             rect = self.marca.boundingRect()
             self.marca.setPos(-rect.width() / 2, -rect.height() / 2)
             # Los clics pasan a través de la estrella hasta el nodo
@@ -304,7 +304,7 @@ class PanelIzquierdo(QWidget):
         self.descripcion = QLabel(descripcion)
         self.descripcion.setWordWrap(True)
         self.descripcion.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
-        self.descripcion.setStyleSheet(f"color: {C.TEXTO_SUAVE}; font-size: 13px;")
+        rol(self.descripcion, "descripcion")
 
         layout.addWidget(self.etiqueta)
         layout.addWidget(self.titulo)
@@ -348,6 +348,13 @@ class PanelDerecho(QGraphicsView):
         # Ventana de la evaluación final (solo se permite una abierta)
         self._ventana_examen = None
 
+        self.crear_camino_nodos()
+
+        # Los nodos se pintan con colores fijos al crearlos: se redibujan
+        # cuando cambia el tema.
+        al_cambiar_tema(self._al_cambiar_tema)
+
+    def _al_cambiar_tema(self, _nombre: str = ""):
         self.crear_camino_nodos()
 
     @staticmethod
@@ -527,29 +534,7 @@ class PanelDerecho(QGraphicsView):
         self._progreso.setCancelButton(None)
         self._progreso.setMinimumDuration(0)
 
-        self._progreso.setStyleSheet(f"""
-            QProgressDialog {{
-                background-color: {C.FONDO};
-                border: 1px solid {C.BORDE};
-                border-radius: 12px;
-            }}
-            QProgressDialog QLabel {{
-                color: {C.TEXTO};
-                font-size: 13px;
-                font-weight: 500;
-            }}
-            QProgressBar {{
-                border: 1px solid {C.BORDE_SUAVE};
-                background-color: {C.SUPERFICIE};
-                border-radius: 6px;
-                height: 8px;
-                text-align: center;
-            }}
-            QProgressBar::chunk {{
-                background-color: {C.ACENTO};
-                border-radius: 5px;
-            }}
-        """)
+        # El aspecto del diálogo de progreso vive en la hoja global (theme.py)
         self._progreso.show()
 
     def _cerrar_progreso(self):

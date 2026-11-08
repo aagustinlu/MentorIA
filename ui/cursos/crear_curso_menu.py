@@ -7,6 +7,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from controllers.controller_crear_curso import CrearCursoController
+from services.database import BaseDatosProyecto
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -24,18 +25,16 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QEvent, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
 
-from ui.theme import Colores as C, rol
+from ui.theme import Colores as C, repulir, rol
+
+
+RUTA_BD = "storage/sistema_estudios.db"
 
 
 # ── Worker: genera el curso sin congelar la interfaz ─────────────────────────
 
 class GenerarCursoWorker(QThread):
-    """Genera y guarda el curso en un hilo aparte.
-
-    El CursoMenu (un widget) NO se crea aquí: los widgets solo pueden crearse
-    en el hilo principal. El worker devuelve únicamente el CursoModel.
-    """
-
+    
     terminado = pyqtSignal(object)   # CursoModel o None
     error = pyqtSignal(str)
 
@@ -46,8 +45,9 @@ class GenerarCursoWorker(QThread):
 
     def run(self):
         try:
-            controller = CrearCursoController(texto=self.texto, ruta=self.ruta)
-            self.terminado.emit(controller.crear_curso())
+            db = BaseDatosProyecto(RUTA_BD)
+            controller = CrearCursoController.desde_bd(db)
+            self.terminado.emit(controller.crear_curso(self.texto, self.ruta))
         except Exception as e:
             self.error.emit(str(e))
 
@@ -101,7 +101,9 @@ class CampoEntrada(QDialog):
         sombra = QGraphicsDropShadowEffect(self)
         sombra.setBlurRadius(36)
         sombra.setOffset(0, 6)
-        sombra.setColor(QColor(40, 45, 50, 45))
+        color_sombra = QColor(C.SOMBRA)
+        color_sombra.setAlpha(C.SOMBRA_ALFA)
+        sombra.setColor(color_sombra)
         self.tarjeta.setGraphicsEffect(sombra)
         raiz.addWidget(self.tarjeta)
 
@@ -130,6 +132,7 @@ class CampoEntrada(QDialog):
 
         # 2. Campo de texto multilínea
         self.input_field = QTextEdit()
+        self.input_field.setObjectName("campoPrompt")  # aspecto en theme.py
         self.input_field.setFont(fuente_sistema)
         self.input_field.setPlaceholderText("¿Qué te gustaría aprender?")
         self.input_field.setAcceptRichText(False)
@@ -159,53 +162,8 @@ class CampoEntrada(QDialog):
         self.estado.setContentsMargins(4, 0, 4, 0)
         interior.addWidget(self.estado)
 
-        self.setStyleSheet(f"""
-            QFrame#tarjetaEntrada {{
-                background-color: {C.SUPERFICIE};
-                border: 1px solid {C.BORDE};
-                border-radius: 16px;
-            }}
-            QTextEdit {{
-                background-color: {C.FONDO};
-                color: {C.TEXTO};
-                border: 1px solid {C.BORDE};
-                border-radius: 10px;
-                padding: 8px 12px;
-                selection-background-color: {C.ACENTO_BORDE};
-                selection-color: {C.TEXTO};
-            }}
-            QTextEdit:focus {{
-                border: 1px solid {C.ACENTO};
-                background-color: {C.SUPERFICIE};
-            }}
-            QPushButton#BotonAdjuntar {{
-                padding: 0;
-                border-radius: 10px;
-                color: {C.TEXTO_SUAVE};
-            }}
-            QPushButton#BotonAdjuntar[adjunto="true"] {{
-                background-color: {C.ACENTO_SUAVE};
-                border: 1px solid {C.ACENTO_BORDE};
-                color: {C.ACENTO};
-            }}
-            QPushButton#BotonEnviar {{
-                padding: 0;
-                border-radius: 10px;
-                background-color: {C.ACENTO};
-                color: #FFFFFF;
-                border: none;
-            }}
-            QPushButton#BotonEnviar:hover {{
-                background-color: {C.ACENTO_HOVER};
-            }}
-            QPushButton#BotonEnviar:pressed {{
-                background-color: {C.ACENTO_PRESIONADO};
-            }}
-            QPushButton#BotonEnviar:disabled {{
-                background-color: #BCC9D4;
-                color: #F4F6F8;
-            }}
-        """)
+        # Todo el estilo del popup (tarjeta, campo, botones) vive en la hoja global
+        # de theme.py, así que cambia solo con el tema.
 
         self.ajustar_altura()
 
@@ -312,8 +270,8 @@ class CampoEntrada(QDialog):
         self._mostrar_estado("Generando tu curso" + "." * self._puntos)
 
     def _mostrar_estado(self, texto: str, error: bool = False):
-        color = C.ERROR if error else C.TEXTO_SUAVE
-        self.estado.setStyleSheet(f"color: {color};")
+        self.estado.setProperty("error", error)
+        repulir(self.estado)
         self.estado.setText(texto)
 
     # Evita cerrar el popup mientras la IA trabaja (se destruiría el hilo en ejecución)

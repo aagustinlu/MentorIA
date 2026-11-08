@@ -1,52 +1,218 @@
-"""Tema visual de la aplicación.
+"""Tema visual de la aplicación (Modo Día / Modo Oscuro).
 
-Paleta suave y de bajo contraste (papel cálido + azul grisáceo), pensada para
-estudiar sin cansar la vista. Todos los colores viven aquí para poder
-ajustarlos desde un único lugar.
+Todos los colores viven en este archivo, en dos paletas:
+
+    "dia"     papel envejecido / marfil con acentos terracota y salvia en tonos
+              pastel. No hay blancos puros: el valor más claro es un crema suave.
+    "oscuro"  carbón cálido de bajo contraste (sin negro ni blanco puros).
+
+Cómo funciona el cambio en caliente
+-----------------------------------
+`Colores` (alias `C`) es una clase cuyos atributos se reemplazan al cambiar de
+tema, así que `C.FONDO` siempre devuelve el color del tema activo. Para que
+la interfaz se actualice sola:
+
+  1. La mayor parte del estilo vive en la hoja de estilos global (selectores por
+     `objectName` o por propiedad: `rol`, `primario`, `seleccionada`...). Al
+     cambiar de tema se regenera y se aplica a toda la aplicación.
+  2. Los widgets que pintan con colores "a mano" (mapa de nodos, HTML de las
+     lecciones, fórmulas...) se suscriben con `al_cambiar_tema(self.metodo)`.
 
 Uso:
     from ui.theme import aplicar_tema
-    aplicar_tema(app)          # una sola vez, justo después de crear QApplication
+    aplicar_tema(app, "oscuro")         # al arrancar (tema guardado)
+
+    from ui.theme import gestor_tema
+    gestor_tema().aplicar("dia")        # en caliente, p. ej. desde Configuración
 """
 
+from __future__ import annotations
+
+from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPalette
 from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
 
 
+TEMA_DIA = "dia"
+TEMA_OSCURO = "oscuro"
+TEMA_POR_DEFECTO = TEMA_DIA
+
+
+# ── Paletas ───────────────────────────────────────────────────────────────────
+
+
+PALETAS: dict[str, dict[str, str | int]] = {
+    
+    TEMA_DIA: {
+        # Superficies
+        "FONDO": "#EEE8DB",
+        "SUPERFICIE": "#FAF7EF",
+        "CAMPO": "#F3EEE4",
+        "HOVER": "#E8E1D4",
+        "BORDE": "#D5CCBC",
+        "BORDE_SUAVE": "#E3DCCE",
+        "DESACTIVADO_FONDO": "#E7E0D4",
+
+        # Texto
+        "TEXTO": "#303630",
+        "TEXTO_SUAVE": "#686C62",
+        "TEXTO_TENUE": "#89897F",
+
+        # Acento: verde bosque natural
+        "ACENTO": "#47775C",
+        "ACENTO_HOVER": "#3F6B50",
+        "ACENTO_PRESIONADO": "#365C45",
+        "ACENTO_SUAVE": "#E3EDE3",
+        "ACENTO_BORDE": "#C5D7C6",
+        "ACENTO_TEXTO": "#3D674C",
+        "TEXTO_SOBRE_ACENTO": "#FFFFFF",
+        "ACENTO_DESACTIVADO": "#C8D6C8",
+        "TEXTO_SOBRE_ACENTO_DESACTIVADO": "#758477",
+
+        # Estados
+        "COMPLETADO": "#668267",
+        "ACTUAL": "#55768A",
+        "BLOQUEADO": "#A69D89",
+        "PENDIENTE": "#B18B53",
+        "OK_TEXTO": "#58785B",
+        "ERROR": "#A65E50",
+        "ERROR_SUAVE": "#F0E1DA",
+
+        # Código
+        "CODIGO_FONDO": "#EAE8DF",
+        "CODIGO_TEXTO": "#343D37",
+        "CODIGO_INLINE_FONDO": "#E2E3D8",
+        "CODIGO_INLINE_TEXTO": "#405044",
+
+        # Varios
+        "SCROLL": "#C9C1B2",
+        "SCROLL_HOVER": "#A69D8D",
+        "TOOLTIP_FONDO": "#303630",
+        "TOOLTIP_TEXTO": "#F1EDE3",
+        "SOMBRA": "#403B30",
+        "SOMBRA_ALFA": 35,
+    },
+
+
+    TEMA_OSCURO: {
+        # Superficies
+        "FONDO": "#202522",
+        "SUPERFICIE": "#292F2B",
+        "CAMPO": "#1C221F",
+        "HOVER": "#343B35",
+        "BORDE": "#414941",
+        "BORDE_SUAVE": "#353D37",
+        "DESACTIVADO_FONDO": "#252B27",
+
+        # Texto
+        "TEXTO": "#E8E5DA",
+        "TEXTO_SUAVE": "#B5B7AA",
+        "TEXTO_TENUE": "#858C80",
+
+        # Acento: naranja tostado
+        "ACENTO": "#35B879",
+        "ACENTO_HOVER": "#43C789",
+        "ACENTO_PRESIONADO": "#279B65",
+        "ACENTO_SUAVE": "#293C32",
+        "ACENTO_BORDE": "#426B53",
+        "ACENTO_TEXTO": "#65D39B",
+        "TEXTO_SOBRE_ACENTO": "#14251B",
+        "ACENTO_DESACTIVADO": "#3C5747",
+        "TEXTO_SOBRE_ACENTO_DESACTIVADO": "#91A99A",
+
+        # Estados
+        "COMPLETADO": "#8EB18A",
+        "ACTUAL": "#80A9C5",
+        "BLOQUEADO": "#625F55",
+        "PENDIENTE": "#D0AA63",
+        "OK_TEXTO": "#A3C69C",
+        "ERROR": "#D9877C",
+        "ERROR_SUAVE": "#402C29",
+
+        # Código
+        "CODIGO_FONDO": "#171D1A",
+        "CODIGO_TEXTO": "#D6DCCF",
+        "CODIGO_INLINE_FONDO": "#303A33",
+        "CODIGO_INLINE_TEXTO": "#DCE2D5",
+
+        # Varios
+        "SCROLL": "#505950",
+        "SCROLL_HOVER": "#687267",
+        "TOOLTIP_FONDO": "#343B35",
+        "TOOLTIP_TEXTO": "#E8E5DA",
+        "SOMBRA": "#000000",
+        "SOMBRA_ALFA": 100,
+    },
+}
+
+
+
 class Colores:
-    FONDO = "#F6F5F2"            # fondo general (papel cálido)
-    SUPERFICIE = "#FFFFFF"       # tarjetas, campos
-    BORDE = "#E3E0D9"
-    BORDE_SUAVE = "#ECEAE4"
+    """Colores del tema activo. Se leen siempre como `C.NOMBRE`."""
 
-    TEXTO = "#2E3338"
-    TEXTO_SUAVE = "#6F767C"
-    TEXTO_TENUE = "#A3A8AC"
+    FONDO: str
+    SUPERFICIE: str
+    CAMPO: str
+    HOVER: str
+    BORDE: str
+    BORDE_SUAVE: str
+    DESACTIVADO_FONDO: str
 
-    ACENTO = "#5B7C99"           # azul grisáceo
-    ACENTO_HOVER = "#4D6D8A"
-    ACENTO_PRESIONADO = "#41607B"
-    ACENTO_SUAVE = "#E8EEF3"
-    ACENTO_BORDE = "#CBD7E1"
+    TEXTO: str
+    TEXTO_SUAVE: str
+    TEXTO_TENUE: str
 
-    # Estados de lección
-    COMPLETADO = "#8DB19B"       # salvia
-    ACTUAL = "#5B7C99"
-    BLOQUEADO = "#C8CBCD"
+    ACENTO: str
+    ACENTO_HOVER: str
+    ACENTO_PRESIONADO: str
+    ACENTO_SUAVE: str
+    ACENTO_BORDE: str
+    ACENTO_TEXTO: str
+    TEXTO_SOBRE_ACENTO: str
+    ACENTO_DESACTIVADO: str
+    TEXTO_SOBRE_ACENTO_DESACTIVADO: str
 
-    PENDIENTE = "#C9A66B"        # ámbar apagado (cursos pendientes)
-    ERROR = "#B0605A"            # rojo terroso, nada estridente
+    COMPLETADO: str
+    ACTUAL: str
+    BLOQUEADO: str
+    PENDIENTE: str
+    OK_TEXTO: str
+    ERROR: str
+    ERROR_SUAVE: str
 
-    CODIGO_FONDO = "#2F3640"     # pizarra oscura suave
-    CODIGO_TEXTO = "#E6E9ED"
+    CODIGO_FONDO: str
+    CODIGO_TEXTO: str
+    CODIGO_INLINE_FONDO: str
+    CODIGO_INLINE_TEXTO: str
+
+    SCROLL: str
+    SCROLL_HOVER: str
+    TOOLTIP_FONDO: str
+    TOOLTIP_TEXTO: str
+    SOMBRA: str
+    SOMBRA_ALFA: int
+
+    nombre: str = TEMA_POR_DEFECTO
+
+    @classmethod
+    def cargar(cls, nombre: str) -> None:
+        """Sustituye los colores de la clase por los de la paleta `nombre`."""
+        for clave, valor in PALETAS[nombre].items():
+            setattr(cls, clave, valor)
+        cls.nombre = nombre
 
 
+Colores.cargar(TEMA_POR_DEFECTO)
 C = Colores
 
 FUENTE = '"Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif'
 
 
-ESTILO_GLOBAL = f"""
+# ── Hoja de estilos global ────────────────────────────────────────────────────
+
+def _estilo_global() -> str:
+    """Construye la hoja de estilos con los colores del tema activo."""
+    return f"""
 * {{
     font-family: {FUENTE};
 }}
@@ -56,6 +222,7 @@ QLabel {{
     background: transparent;
 }}
 
+/* ── Roles tipográficos (ver helper `rol`) ────────────── */
 QLabel[rol="titulo"] {{
     font-size: 22px;
     font-weight: 600;
@@ -67,6 +234,10 @@ QLabel[rol="subtitulo"] {{
     color: {C.TEXTO_SUAVE};
 }}
 
+QLabel[rol="subtitulo"][error="true"] {{
+    color: {C.ERROR};
+}}
+
 QLabel[rol="seccion"] {{
     font-size: 11px;
     font-weight: 600;
@@ -75,8 +246,36 @@ QLabel[rol="seccion"] {{
 }}
 
 QLabel[rol="enlace"] {{
-    color: {C.ACENTO};
+    color: {C.ACENTO_TEXTO};
     font-size: 12px;
+}}
+
+QLabel[rol="descripcion"] {{
+    color: {C.TEXTO_SUAVE};
+    font-size: 13px;
+}}
+
+QLabel[rol="suave"] {{
+    color: {C.TEXTO_SUAVE};
+}}
+
+QLabel[rol="letra"] {{
+    color: {C.TEXTO_SUAVE};
+    font-weight: 600;
+}}
+
+QLabel[rol="acento"] {{
+    color: {C.ACENTO_TEXTO};
+}}
+
+QLabel[rol="ok"] {{
+    color: {C.OK_TEXTO};
+    font-weight: 600;
+}}
+
+QLabel[rol="error"] {{
+    color: {C.ERROR};
+    font-weight: 600;
 }}
 
 /* ── Tarjetas ─────────────────────────────────────────── */
@@ -84,6 +283,33 @@ QLabel[rol="enlace"] {{
     background-color: {C.SUPERFICIE};
     border: 1px solid {C.BORDE_SUAVE};
     border-radius: 14px;
+}}
+
+QFrame#tarjetaEntrada {{
+    background-color: {C.SUPERFICIE};
+    border: 1px solid {C.BORDE};
+    border-radius: 16px;
+}}
+
+QFrame#revision {{
+    background-color: {C.FONDO};
+    border: 1px solid {C.BORDE_SUAVE};
+    border-radius: 10px;
+}}
+
+/* ── Opciones del examen ──────────────────────────────── */
+QFrame#opcion {{
+    background-color: {C.SUPERFICIE};
+    border: 1px solid {C.BORDE};
+    border-radius: 10px;
+}}
+QFrame#opcion:hover {{
+    border-color: {C.ACENTO_BORDE};
+    background-color: {C.HOVER};
+}}
+QFrame#opcion[seleccionada="true"] {{
+    background-color: {C.ACENTO_SUAVE};
+    border: 2px solid {C.ACENTO};
 }}
 
 /* ── Botones ──────────────────────────────────────────── */
@@ -103,14 +329,14 @@ QPushButton:pressed {{
     background-color: {C.ACENTO_BORDE};
 }}
 QPushButton:disabled {{
-    background-color: #F1F0ED;
+    background-color: {C.DESACTIVADO_FONDO};
     color: {C.TEXTO_TENUE};
     border-color: {C.BORDE_SUAVE};
 }}
 
 QPushButton[primario="true"] {{
     background-color: {C.ACENTO};
-    color: #FFFFFF;
+    color: {C.TEXTO_SOBRE_ACENTO};
     border: none;
 }}
 QPushButton[primario="true"]:hover {{
@@ -120,13 +346,55 @@ QPushButton[primario="true"]:pressed {{
     background-color: {C.ACENTO_PRESIONADO};
 }}
 QPushButton[primario="true"]:disabled {{
-    background-color: #BCC9D4;
-    color: #F4F6F8;
+    background-color: {C.ACENTO_DESACTIVADO};
+    color: {C.TEXTO_SOBRE_ACENTO_DESACTIVADO};
+}}
+
+QPushButton#btnEliminarCurso {{
+    background: transparent;
+    border: none;
+    color: {C.TEXTO_TENUE};
+    font-size: 12px;
+    padding: 6px 10px;
+}}
+QPushButton#btnEliminarCurso:hover {{
+    background-color: {C.ERROR_SUAVE};
+    color: {C.ERROR};
+    border-radius: 8px;
+}}
+
+QPushButton#BotonAdjuntar {{
+    padding: 0;
+    border-radius: 10px;
+    color: {C.TEXTO_SUAVE};
+}}
+QPushButton#BotonAdjuntar[adjunto="true"] {{
+    background-color: {C.ACENTO_SUAVE};
+    border: 1px solid {C.ACENTO_BORDE};
+    color: {C.ACENTO_TEXTO};
+}}
+
+QPushButton#BotonEnviar {{
+    padding: 0;
+    border-radius: 10px;
+    background-color: {C.ACENTO};
+    color: {C.TEXTO_SOBRE_ACENTO};
+    border: none;
+}}
+QPushButton#BotonEnviar:hover {{
+    background-color: {C.ACENTO_HOVER};
+}}
+QPushButton#BotonEnviar:pressed {{
+    background-color: {C.ACENTO_PRESIONADO};
+}}
+QPushButton#BotonEnviar:disabled {{
+    background-color: {C.ACENTO_DESACTIVADO};
+    color: {C.TEXTO_SOBRE_ACENTO_DESACTIVADO};
 }}
 
 /* ── Campos de texto ──────────────────────────────────── */
 QLineEdit {{
-    background-color: {C.SUPERFICIE};
+    background-color: {C.CAMPO};
     color: {C.TEXTO};
     border: 1px solid {C.BORDE};
     border-radius: 8px;
@@ -137,6 +405,28 @@ QLineEdit {{
 }}
 QLineEdit:focus {{
     border: 1px solid {C.ACENTO};
+}}
+
+QTextEdit#campoPrompt {{
+    background-color: {C.CAMPO};
+    color: {C.TEXTO};
+    border: 1px solid {C.BORDE};
+    border-radius: 10px;
+    padding: 8px 12px;
+    selection-background-color: {C.ACENTO_BORDE};
+    selection-color: {C.TEXTO};
+}}
+QTextEdit#campoPrompt:focus {{
+    border: 1px solid {C.ACENTO};
+}}
+
+/* Bloques de código (lecciones y examen) */
+QPlainTextEdit#codigoBloque {{
+    background: {C.CODIGO_FONDO};
+    color: {C.CODIGO_TEXTO};
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
 }}
 
 /* ── Lista de cursos ──────────────────────────────────── */
@@ -154,7 +444,7 @@ QListWidget::item {{
     border-radius: 8px;
 }}
 QListWidget::item:hover {{
-    background-color: #F3F4F5;
+    background-color: {C.HOVER};
 }}
 QListWidget::item:selected {{
     background-color: {C.ACENTO_SUAVE};
@@ -168,12 +458,12 @@ QScrollBar:vertical {{
     margin: 2px;
 }}
 QScrollBar::handle:vertical {{
-    background: #D5D2CB;
+    background: {C.SCROLL};
     border-radius: 4px;
     min-height: 30px;
 }}
 QScrollBar::handle:vertical:hover {{
-    background: #BEBBB3;
+    background: {C.SCROLL_HOVER};
 }}
 QScrollBar:horizontal {{
     background: transparent;
@@ -181,12 +471,12 @@ QScrollBar:horizontal {{
     margin: 2px;
 }}
 QScrollBar::handle:horizontal {{
-    background: #D5D2CB;
+    background: {C.SCROLL};
     border-radius: 4px;
     min-width: 30px;
 }}
 QScrollBar::handle:horizontal:hover {{
-    background: #BEBBB3;
+    background: {C.SCROLL_HOVER};
 }}
 QScrollBar::add-line, QScrollBar::sub-line {{
     width: 0px;
@@ -198,9 +488,9 @@ QScrollBar::add-page, QScrollBar::sub-page {{
 
 /* ── Varios ───────────────────────────────────────────── */
 QToolTip {{
-    background-color: {C.TEXTO};
-    color: #FFFFFF;
-    border: none;
+    background-color: {C.TOOLTIP_FONDO};
+    color: {C.TOOLTIP_TEXTO};
+    border: 1px solid {C.BORDE};
     padding: 6px 8px;
 }}
 
@@ -210,39 +500,145 @@ QGraphicsView {{
     border-radius: 14px;
 }}
 
-QProgressDialog, QMessageBox {{
+QMessageBox {{
     background-color: {C.FONDO};
+}}
+
+QProgressDialog {{
+    background-color: {C.FONDO};
+    border: 1px solid {C.BORDE};
+    border-radius: 12px;
+}}
+QProgressDialog QLabel {{
+    font-size: 13px;
+    font-weight: 500;
+}}
+QProgressBar {{
+    border: 1px solid {C.BORDE_SUAVE};
+    background-color: {C.SUPERFICIE};
+    border-radius: 6px;
+    height: 8px;
+    text-align: center;
+}}
+QProgressBar::chunk {{
+    background-color: {C.ACENTO};
+    border-radius: 5px;
 }}
 """
 
 
 def _paleta() -> QPalette:
     paleta = QPalette()
-    paleta.setColor(QPalette.ColorRole.Window, QColor(C.FONDO))
-    paleta.setColor(QPalette.ColorRole.WindowText, QColor(C.TEXTO))
-    paleta.setColor(QPalette.ColorRole.Base, QColor(C.SUPERFICIE))
-    paleta.setColor(QPalette.ColorRole.AlternateBase, QColor(C.FONDO))
-    paleta.setColor(QPalette.ColorRole.Text, QColor(C.TEXTO))
-    paleta.setColor(QPalette.ColorRole.Button, QColor(C.SUPERFICIE))
-    paleta.setColor(QPalette.ColorRole.ButtonText, QColor(C.TEXTO))
-    paleta.setColor(QPalette.ColorRole.Highlight, QColor(C.ACENTO_BORDE))
-    paleta.setColor(QPalette.ColorRole.HighlightedText, QColor(C.TEXTO))
-    paleta.setColor(QPalette.ColorRole.PlaceholderText, QColor(C.TEXTO_TENUE))
+    roles = {
+        QPalette.ColorRole.Window: C.FONDO,
+        QPalette.ColorRole.WindowText: C.TEXTO,
+        QPalette.ColorRole.Base: C.CAMPO,
+        QPalette.ColorRole.AlternateBase: C.FONDO,
+        QPalette.ColorRole.Text: C.TEXTO,
+        QPalette.ColorRole.Button: C.SUPERFICIE,
+        QPalette.ColorRole.ButtonText: C.TEXTO,
+        QPalette.ColorRole.Highlight: C.ACENTO_BORDE,
+        QPalette.ColorRole.HighlightedText: C.TEXTO,
+        QPalette.ColorRole.PlaceholderText: C.TEXTO_TENUE,
+        QPalette.ColorRole.ToolTipBase: C.TOOLTIP_FONDO,
+        QPalette.ColorRole.ToolTipText: C.TOOLTIP_TEXTO,
+        QPalette.ColorRole.Link: C.ACENTO_TEXTO,
+        QPalette.ColorRole.LinkVisited: C.ACENTO_TEXTO,
+    }
+    for rol_paleta, color in roles.items():
+        paleta.setColor(rol_paleta, QColor(color))
+
+    # Texto atenuado cuando un control está deshabilitado
+    for rol_paleta in (
+        QPalette.ColorRole.WindowText,
+        QPalette.ColorRole.Text,
+        QPalette.ColorRole.ButtonText,
+    ):
+        paleta.setColor(QPalette.ColorGroup.Disabled, rol_paleta, QColor(C.TEXTO_TENUE))
     return paleta
 
 
-def aplicar_tema(app: QApplication) -> None:
+# ── Gestor de temas ───────────────────────────────────────────────────────────
+
+class GestorTema(QObject):
+    """Aplica un tema a toda la aplicación y avisa a los widgets que pintan a mano."""
+
+    tema_cambiado = pyqtSignal(str)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._inicializado = False
+
+    @property
+    def nombre(self) -> str:
+        return Colores.nombre
+
+    @property
+    def es_oscuro(self) -> bool:
+        return Colores.nombre == TEMA_OSCURO
+
+    def aplicar(self, nombre: str, app: QApplication | None = None) -> None:
+        """Activa el tema `nombre` ("dia" u "oscuro"). Un nombre desconocido usa el de día."""
+        if nombre not in PALETAS:
+            nombre = TEMA_POR_DEFECTO
+
+        app = app or QApplication.instance()
+        if app is None:
+            Colores.cargar(nombre)
+            return
+
+        # Se congelan los repintados para que el cambio no parpadee a medias
+        ventanas = app.topLevelWidgets()
+        for ventana in ventanas:
+            ventana.setUpdatesEnabled(False)
+        try:
+            Colores.cargar(nombre)
+
+            if not self._inicializado:
+                app.setStyle("Fusion")
+                app.setFont(QFont("Segoe UI", 10))
+                self._inicializado = True
+
+            app.setPalette(_paleta())
+            app.setStyleSheet(_estilo_global())
+        finally:
+            for ventana in ventanas:
+                ventana.setUpdatesEnabled(True)
+
+        # Después de la hoja de estilos: los widgets que repintan a mano leen ya
+        # los colores nuevos.
+        self.tema_cambiado.emit(nombre)
+
+
+_gestor: GestorTema | None = None
+
+
+def gestor_tema() -> GestorTema:
+    """Gestor único de la aplicación (se crea la primera vez que se pide)."""
+    global _gestor
+    if _gestor is None:
+        _gestor = GestorTema()
+    return _gestor
+
+
+def aplicar_tema(app: QApplication, nombre: str = TEMA_POR_DEFECTO) -> None:
     """Aplica estilo base, paleta, fuente y hoja de estilos global."""
-    app.setStyle("Fusion")
-    app.setPalette(_paleta())
-    app.setFont(QFont("Segoe UI", 10))
-    app.setStyleSheet(ESTILO_GLOBAL)
+    gestor_tema().aplicar(nombre, app)
+
+
+def al_cambiar_tema(slot) -> None:
+    """Suscribe `slot` al cambio de tema.
+
+    Pasa siempre un método de un QObject (p. ej. `self._aplicar_tema`): Qt lo
+    desconecta solo cuando el widget se destruye. Con lambdas no ocurre.
+    """
+    gestor_tema().tema_cambiado.connect(slot)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def rol(widget: QWidget, nombre: str) -> QWidget:
-    """Asigna un 'rol' tipográfico (titulo, subtitulo, seccion, enlace)."""
+    """Asigna un 'rol' tipográfico (titulo, subtitulo, seccion, enlace, ok, error...)."""
     widget.setProperty("rol", nombre)
     return widget
 
@@ -254,9 +650,17 @@ def primario(boton: QPushButton) -> QPushButton:
 
 
 def tarjeta(widget: QWidget) -> QWidget:
-    """Convierte un QWidget en una tarjeta con fondo blanco y bordes redondeados."""
+    """Convierte un QWidget en una tarjeta con fondo de superficie y bordes redondeados."""
     from PyQt6.QtCore import Qt
 
     widget.setObjectName("tarjeta")
     widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
     return widget
+
+
+def repulir(widget: QWidget) -> None:
+    """Vuelve a evaluar los selectores de estilo tras cambiar una propiedad dinámica."""
+    estilo = widget.style()
+    estilo.unpolish(widget)
+    estilo.polish(widget)
+    widget.update()

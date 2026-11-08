@@ -17,13 +17,17 @@ from services.fuente_multiidioma import (
     css_fuente_multidioma,
 )
 
-from ui.theme import Colores as C
+from ui.theme import Colores as C, al_cambiar_tema
 
 
 class TextoAutoAltura(QTextBrowser):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        # Último HTML mostrado: hay que volver a cargarlo cuando cambia el tema
+        # (el documento "hornea" los colores de la hoja de estilos al cargarse).
+        self._html_actual: str | None = None
 
         self.setFrameStyle(0)
         self.setOpenExternalLinks(True)
@@ -33,6 +37,32 @@ class TextoAutoAltura(QTextBrowser):
 
         self.setFont(fuente)
         self.document().setDefaultFont(fuente)
+
+        # Colores del tema (estilo del widget + hoja del documento)
+        self._aplicar_tema()
+        al_cambiar_tema(self._aplicar_tema)
+
+        # Desactivamos las barras de desplazamiento.
+        self.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+
+        self.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+
+        self.setMinimumHeight(0)
+
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+
+        # Reducimos el margen interno del documento.
+        self.document().setDocumentMargin(0)
+
+
+    def _aplicar_tema(self, _nombre: str = ""):
 
         # Estilo general del widget.
         self.setStyleSheet(
@@ -78,37 +108,24 @@ class TextoAutoAltura(QTextBrowser):
             }}
 
             a {{
-                color: {C.ACENTO};
+                color: {C.ACENTO_TEXTO};
             }}
 
             code, pre {{
                 font-family: Consolas, 'Cascadia Mono', monospace !important;
-                background-color: #EFEDE8;
-                color: #3B4248;
+                background-color: {C.CODIGO_INLINE_FONDO};
+                color: {C.CODIGO_INLINE_TEXTO};
             }}
         """)
 
-        # Desactivamos las barras de desplazamiento.
-        self.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-
-        self.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-
-        self.setMinimumHeight(0)
-
-        self.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed
-        )
-
-        # Reducimos el margen interno del documento.
-        self.document().setDocumentMargin(0)
+        # Si ya hay contenido, se recarga para que adopte los colores nuevos.
+        if self._html_actual is not None:
+            super().setHtml(self._html_actual)
+            self.ajustar_altura()
 
 
     def setHtml(self, html):
+        self._html_actual = html
         super().setHtml(html)
         self.ajustar_altura()
 

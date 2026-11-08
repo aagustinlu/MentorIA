@@ -24,7 +24,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from models.models import LeccionModel
-from ui.theme import Colores as C, primario, rol, tarjeta
+from ui.theme import primario, rol, tarjeta
 
 
 from services.fuente_multiidioma import (
@@ -75,7 +75,7 @@ class LeccionMenu(QWidget):
         layout_principal.setContentsMargins(20, 20, 20, 16)
         layout_principal.setSpacing(14)
 
-        # Pila de páginas (dentro de una tarjeta blanca, como una hoja de lectura)
+        # Pila de páginas (dentro de una tarjeta, como una hoja de lectura)
         self.pila_paginas = QStackedWidget()
         self.pila_paginas.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -119,9 +119,7 @@ class LeccionMenu(QWidget):
 
         # Aviso para lecciones ya completadas (modo repaso)
         self.lbl_completada = QLabel("✓ Lección completada")
-        self.lbl_completada.setStyleSheet(
-            f"color: {C.COMPLETADO}; font-weight: 600;"
-        )
+        rol(self.lbl_completada, "ok")
 
         for boton in (self.btn_retroceder, self.btn_avanzar):
             boton.setMinimumWidth(110)

@@ -17,7 +17,7 @@ from PyQt6.QtCore import QEvent, QSize, Qt, QThread, pyqtSignal
 
 from .popup import Configuraciones
 from .cursos.crear_curso_menu import CampoEntrada
-from .theme import Colores as C, primario, rol, tarjeta
+from .theme import Colores as C, al_cambiar_tema, primario, rol, tarjeta
 from services.database import BaseDatosProyecto
 
 from .cursos.curso import CursoMenu
@@ -98,6 +98,10 @@ class PanelIzquierdo(QWidget):
         self.btn_config.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_config.clicked.connect(self.mostrar_confg)
 
+        # Los puntos de color del progreso van dentro de HTML: se regeneran
+        # al cambiar de tema.
+        al_cambiar_tema(self._al_cambiar_tema)
+
         layout.addWidget(self.nombre_label)
         layout.addWidget(self.subtitulo)
         layout.addSpacing(22)
@@ -121,9 +125,15 @@ class PanelIzquierdo(QWidget):
     def _cantidad(n: int, singular: str, plural: str) -> str:
         return f"{n} {singular if n == 1 else plural}"
 
+    def _al_cambiar_tema(self, _nombre: str = ""):
+        self.mostrar_progreso(*self._ultimo_progreso)
+
     def mostrar_progreso(
         self, cursos_completados: int, cursos_pendientes: int, lecciones_completadas: int
     ):
+        self._ultimo_progreso = (
+            cursos_completados, cursos_pendientes, lecciones_completadas
+        )
         self.texto_cursos_completados.setText(self._fila(
             C.COMPLETADO,
             self._cantidad(cursos_completados, "curso completado", "cursos completados"),
@@ -257,22 +267,8 @@ class PanelDerecho(QWidget):
         btn_eliminar = QPushButton("Eliminar")
         btn_eliminar.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_eliminar.setToolTip("Eliminar este curso")
-        btn_eliminar.setStyleSheet(
-            f"""
-            QPushButton {{
-                background: transparent;
-                border: none;
-                color: {C.TEXTO_TENUE};
-                font-size: 12px;
-                padding: 6px 10px;
-            }}
-            QPushButton:hover {{
-                background-color: #F6E9E7;
-                color: {C.ERROR};
-                border-radius: 8px;
-            }}
-            """
-        )
+        # Estilo en la hoja global (ver theme.py): sigue al tema solo
+        btn_eliminar.setObjectName("btnEliminarCurso")
         btn_eliminar.clicked.connect(
             lambda _checked=False, cid=curso_id, t=titulo: self._confirmar_eliminar_curso(cid, t)
         )

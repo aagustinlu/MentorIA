@@ -22,8 +22,6 @@ from services.fuente_multiidioma import (
     crear_fuente_multidioma,
 )
 
-from ui.theme import Colores as C
-
 
 class WidgetCodigo(QPlainTextEdit):
 
@@ -56,16 +54,8 @@ class WidgetCodigo(QPlainTextEdit):
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
 
-        # Apariencia.
-        self.setStyleSheet(f"""
-            QPlainTextEdit {{
-                background: {C.CODIGO_FONDO};
-                color: {C.CODIGO_TEXTO};
-                border: none;
-                border-radius: 10px;
-                padding: 10px;
-            }}
-        """)
+        # Apariencia: colores en la hoja global (theme.py), siguen al tema solos.
+        self.setObjectName("codigoBloque")
 
         self.setMinimumSize(0, 0)
         self.setMaximumHeight(250)

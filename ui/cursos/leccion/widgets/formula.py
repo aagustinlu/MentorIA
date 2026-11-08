@@ -6,6 +6,7 @@ from html import escape
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import QSizePolicy
 from PyQt6.QtCore import QUrl
+from PyQt6.QtGui import QColor
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -18,6 +19,8 @@ from services.fuente_multiidioma import (
     css_fuente_multidioma,
     FUENTE_JAPONESA_PATH,
 )
+
+from ui.theme import Colores as C, al_cambiar_tema
 
 
 class WidgetFormula(QWebEngineView):
@@ -44,9 +47,25 @@ class WidgetFormula(QWebEngineView):
         # Escuchamos los cambios de título para ajustar la altura.
         self.titleChanged.connect(self.ajustar_altura)
 
+        # El fondo de la página web es blanco por defecto: se iguala al de la
+        # tarjeta de la lección y se mantiene al día al cambiar de tema.
+        self._aplicar_tema()
+        al_cambiar_tema(self._aplicar_tema)
+
         # Cargamos el HTML.
         base_url = QUrl.fromLocalFile(str(PROJECT_ROOT) + "/")
         self.setHtml(html, base_url)
+
+
+    def _aplicar_tema(self, _nombre: str = ""):
+
+        self.page().setBackgroundColor(QColor(C.SUPERFICIE))
+
+        # MathJax dibuja con "currentColor": basta cambiar el color del cuerpo
+        # para que la fórmula cambie sin recargar la página.
+        self.page().runJavaScript(
+            f"if (document.body) document.body.style.color = '{C.TEXTO}';"
+        )
 
 
     def escapar_contenido(self, contenido):
@@ -106,6 +125,7 @@ class WidgetFormula(QWebEngineView):
                 }}
 
                 body {{
+                    color: {C.TEXTO};
                     font-family: "NotoSansJPLocal", {familia_css};
                     box-sizing: border-box;
                     text-align: center;
