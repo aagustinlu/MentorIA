@@ -17,7 +17,7 @@ from PyQt6.QtCore import QEvent, QSize, Qt, QThread, pyqtSignal
 
 from .popup import Configuraciones
 from .cursos.crear_curso_menu import CampoEntrada
-from .theme import Colores as C, al_cambiar_tema, primario, rol, tarjeta
+from .theme import Colores as C, al_cambiar_tema, fs, primario, rol, tarjeta
 from services.database import BaseDatosProyecto
 
 from .cursos.curso import CursoMenu
@@ -62,7 +62,7 @@ class PanelIzquierdo(QWidget):
         self._worker: ConsultarSaldoWorker | None = None
         
         tarjeta(self)
-        self.setFixedWidth(230)
+        self.setFixedWidth(250)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 22, 20, 20)
@@ -75,7 +75,7 @@ class PanelIzquierdo(QWidget):
 #        self.logo_label.setScaledContents(True) 
         
         self.nombre_label = QLabel(f"<b>{nombre}</b>")
-        self.nombre_label.setStyleSheet("font-size: 18px;")
+        self.nombre_label.setStyleSheet(f"font-size: {fs(18)}px;")
         self.nombre_label.setWordWrap(True)
 
         self.subtitulo = QLabel("Tu espacio de estudio")
@@ -267,7 +267,7 @@ class PanelDerecho(QWidget):
         layout.setSpacing(8)
 
         etiqueta = QLabel(titulo)
-        etiqueta.setStyleSheet("font-size: 14px;")
+        etiqueta.setStyleSheet(f"font-size: {fs(14)}px;")
         # Deja pasar el clic para que seleccionar la fila siga abriendo el curso
         etiqueta.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 

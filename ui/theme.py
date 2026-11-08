@@ -4,6 +4,12 @@ from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPalette
 from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
 
+from services.fuente_multiidioma import (
+    crear_fuente_multidioma,
+    css_fuente_multidioma,
+    registrar_fuente_multidioma,
+)
+
 
 TEMA_DIA = "dia"
 TEMA_OSCURO = "oscuro"
@@ -177,32 +183,48 @@ class Colores:
 Colores.cargar(TEMA_POR_DEFECTO)
 C = Colores
 
-FUENTE = '"Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif'
+# ── Tipografía ────────────────────────────────────────────────────────────────
+# Fuente: Plus Jakarta Sans (con Noto Sans JP para japonés), ver services/fuente_multiidioma.py.
+# Todos los tamaños de texto de la interfaz pasan por `fs()`: para agrandar o
+# reducir la letra de TODA la aplicación basta con cambiar ESCALA_FUENTE.
+
+ESCALA_FUENTE = 1.1
+TAMANO_BASE = 14  # px de referencia del texto general (antes de escalar)
+
+
+def fs(px: int | float) -> int:
+    """Tamaño de letra en píxeles, ya multiplicado por la escala global."""
+    return max(1, round(px * ESCALA_FUENTE))
+
 
 
 # ── Hoja de estilos global ────────────────────────────────────────────────────
 
 def _estilo_global() -> str:
-    """Construye la hoja de estilos con los colores del tema activo."""
+    """Construye la hoja de estilos con los colores y tipografía activos."""
+
     return f"""
 * {{
-    font-family: {FUENTE};
+    font-family: {css_fuente_multidioma()};
 }}
 
 QLabel {{
     color: {C.TEXTO};
     background: transparent;
+    font-weight: 500;
 }}
 
-/* ── Roles tipográficos (ver helper `rol`) ────────────── */
+/* ── Roles tipográficos ─────────────────────────────── */
+
 QLabel[rol="titulo"] {{
-    font-size: 22px;
-    font-weight: 600;
+    font-size: {fs(22)}px;
+    font-weight: 800;
     color: {C.TEXTO};
 }}
 
 QLabel[rol="subtitulo"] {{
-    font-size: 12px;
+    font-size: {fs(12)}px;
+    font-weight: 600;
     color: {C.TEXTO_SUAVE};
 }}
 
@@ -211,46 +233,51 @@ QLabel[rol="subtitulo"][error="true"] {{
 }}
 
 QLabel[rol="seccion"] {{
-    font-size: 11px;
-    font-weight: 600;
+    font-size: {fs(11)}px;
+    font-weight: 800;
     color: {C.TEXTO_TENUE};
-    letter-spacing: 1px;
+    letter-spacing: 0.7px;
 }}
 
 QLabel[rol="enlace"] {{
     color: {C.ACENTO_TEXTO};
-    font-size: 12px;
+    font-size: {fs(12)}px;
+    font-weight: 700;
 }}
 
 QLabel[rol="descripcion"] {{
     color: {C.TEXTO_SUAVE};
-    font-size: 13px;
+    font-size: {fs(13)}px;
+    font-weight: 400;
 }}
 
 QLabel[rol="suave"] {{
     color: {C.TEXTO_SUAVE};
+    font-weight: 500;
 }}
 
 QLabel[rol="letra"] {{
     color: {C.TEXTO_SUAVE};
-    font-weight: 600;
+    font-weight: 700;
 }}
 
 QLabel[rol="acento"] {{
     color: {C.ACENTO_TEXTO};
+    font-weight: 700;
 }}
 
 QLabel[rol="ok"] {{
     color: {C.OK_TEXTO};
-    font-weight: 600;
+    font-weight: 700;
 }}
 
 QLabel[rol="error"] {{
     color: {C.ERROR};
-    font-weight: 600;
+    font-weight: 700;
 }}
 
-/* ── Tarjetas ─────────────────────────────────────────── */
+/* ── Tarjetas ──────────────────────────────────────── */
+
 #tarjeta {{
     background-color: {C.SUPERFICIE};
     border: 1px solid {C.BORDE_SUAVE};
@@ -269,37 +296,45 @@ QFrame#revision {{
     border-radius: 10px;
 }}
 
-/* ── Opciones del examen ──────────────────────────────── */
+/* ── Opciones del examen ──────────────────────────── */
+
 QFrame#opcion {{
     background-color: {C.SUPERFICIE};
     border: 1px solid {C.BORDE};
     border-radius: 10px;
 }}
+
 QFrame#opcion:hover {{
     border-color: {C.ACENTO_BORDE};
     background-color: {C.HOVER};
 }}
+
 QFrame#opcion[seleccionada="true"] {{
     background-color: {C.ACENTO_SUAVE};
     border: 2px solid {C.ACENTO};
 }}
 
-/* ── Botones ──────────────────────────────────────────── */
+/* ── Botones ──────────────────────────────────────── */
+
 QPushButton {{
     background-color: {C.SUPERFICIE};
     color: {C.TEXTO};
     border: 1px solid {C.BORDE};
-    border-radius: 8px;
+    border-radius: 9px;
     padding: 8px 16px;
-    font-size: 13px;
+    font-size: {fs(13)}px;
+    font-weight: 700;
 }}
+
 QPushButton:hover {{
     background-color: {C.ACENTO_SUAVE};
     border-color: {C.ACENTO_BORDE};
 }}
+
 QPushButton:pressed {{
     background-color: {C.ACENTO_BORDE};
 }}
+
 QPushButton:disabled {{
     background-color: {C.DESACTIVADO_FONDO};
     color: {C.TEXTO_TENUE};
@@ -310,13 +345,17 @@ QPushButton[primario="true"] {{
     background-color: {C.ACENTO};
     color: {C.TEXTO_SOBRE_ACENTO};
     border: none;
+    font-weight: 800;
 }}
+
 QPushButton[primario="true"]:hover {{
     background-color: {C.ACENTO_HOVER};
 }}
+
 QPushButton[primario="true"]:pressed {{
     background-color: {C.ACENTO_PRESIONADO};
 }}
+
 QPushButton[primario="true"]:disabled {{
     background-color: {C.ACENTO_DESACTIVADO};
     color: {C.TEXTO_SOBRE_ACENTO_DESACTIVADO};
@@ -326,9 +365,11 @@ QPushButton#btnEliminarCurso {{
     background: transparent;
     border: none;
     color: {C.TEXTO_TENUE};
-    font-size: 12px;
+    font-size: {fs(12)}px;
     padding: 6px 10px;
+    font-weight: 600;
 }}
+
 QPushButton#btnEliminarCurso:hover {{
     background-color: {C.ERROR_SUAVE};
     color: {C.ERROR};
@@ -336,10 +377,12 @@ QPushButton#btnEliminarCurso:hover {{
 }}
 
 QPushButton#BotonAdjuntar {{
+    font-size: {fs(18)}px;
     padding: 0;
     border-radius: 10px;
     color: {C.TEXTO_SUAVE};
 }}
+
 QPushButton#BotonAdjuntar[adjunto="true"] {{
     background-color: {C.ACENTO_SUAVE};
     border: 1px solid {C.ACENTO_BORDE};
@@ -347,34 +390,41 @@ QPushButton#BotonAdjuntar[adjunto="true"] {{
 }}
 
 QPushButton#BotonEnviar {{
+    font-size: {fs(18)}px;
     padding: 0;
     border-radius: 10px;
     background-color: {C.ACENTO};
     color: {C.TEXTO_SOBRE_ACENTO};
     border: none;
 }}
+
 QPushButton#BotonEnviar:hover {{
     background-color: {C.ACENTO_HOVER};
 }}
+
 QPushButton#BotonEnviar:pressed {{
     background-color: {C.ACENTO_PRESIONADO};
 }}
+
 QPushButton#BotonEnviar:disabled {{
     background-color: {C.ACENTO_DESACTIVADO};
     color: {C.TEXTO_SOBRE_ACENTO_DESACTIVADO};
 }}
 
-/* ── Campos de texto ──────────────────────────────────── */
+/* ── Campos de texto ──────────────────────────────── */
+
 QLineEdit {{
     background-color: {C.CAMPO};
     color: {C.TEXTO};
     border: 1px solid {C.BORDE};
-    border-radius: 8px;
+    border-radius: 9px;
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: {fs(13)}px;
+    font-weight: 500;
     selection-background-color: {C.ACENTO_BORDE};
     selection-color: {C.TEXTO};
 }}
+
 QLineEdit:focus {{
     border: 1px solid {C.ACENTO};
 }}
@@ -385,15 +435,21 @@ QTextEdit#campoPrompt {{
     border: 1px solid {C.BORDE};
     border-radius: 10px;
     padding: 8px 12px;
+    font-weight: 500;
     selection-background-color: {C.ACENTO_BORDE};
     selection-color: {C.TEXTO};
 }}
+
 QTextEdit#campoPrompt:focus {{
     border: 1px solid {C.ACENTO};
 }}
 
-/* Bloques de código (lecciones y examen) */
+/* ── Bloques de código ────────────────────────────── */
+
 QPlainTextEdit#codigoBloque {{
+    font-family: Consolas, "Cascadia Mono", "SF Mono", Menlo, "DejaVu Sans Mono", monospace;
+    font-size: {fs(14)}px;
+    font-weight: normal;
     background: {C.CODIGO_FONDO};
     color: {C.CODIGO_TEXTO};
     border: none;
@@ -401,64 +457,80 @@ QPlainTextEdit#codigoBloque {{
     padding: 10px;
 }}
 
-/* ── Lista de cursos ──────────────────────────────────── */
+/* ── Lista de cursos ───────────────────────────────── */
+
 QListWidget {{
     background-color: {C.SUPERFICIE};
     border: 1px solid {C.BORDE_SUAVE};
     border-radius: 14px;
     padding: 8px;
     outline: 0;
-    font-size: 14px;
+    font-size: {fs(14)}px;
+    font-weight: 600;
 }}
+
 QListWidget::item {{
     color: {C.TEXTO};
     padding: 12px 14px;
     border-radius: 8px;
 }}
+
 QListWidget::item:hover {{
     background-color: {C.HOVER};
 }}
+
 QListWidget::item:selected {{
     background-color: {C.ACENTO_SUAVE};
     color: {C.TEXTO};
 }}
 
-/* ── Barras de desplazamiento ─────────────────────────── */
+/* ── Barras de desplazamiento ──────────────────────── */
+
 QScrollBar:vertical {{
     background: transparent;
     width: 10px;
     margin: 2px;
 }}
+
 QScrollBar::handle:vertical {{
     background: {C.SCROLL};
     border-radius: 4px;
     min-height: 30px;
 }}
+
 QScrollBar::handle:vertical:hover {{
     background: {C.SCROLL_HOVER};
 }}
+
 QScrollBar:horizontal {{
     background: transparent;
     height: 10px;
     margin: 2px;
 }}
+
 QScrollBar::handle:horizontal {{
     background: {C.SCROLL};
     border-radius: 4px;
     min-width: 30px;
 }}
+
 QScrollBar::handle:horizontal:hover {{
     background: {C.SCROLL_HOVER};
 }}
-QScrollBar::add-line, QScrollBar::sub-line {{
+
+QScrollBar::add-line,
+QScrollBar::sub-line {{
     width: 0px;
     height: 0px;
 }}
-QScrollBar::add-page, QScrollBar::sub-page {{
+
+QScrollBar::add-page,
+QScrollBar::sub-page {{
     background: transparent;
 }}
 
-/* ── Varios ───────────────────────────────────────────── */
+/* ── Varios ───────────────────────────────────────── */
+
 QToolTip {{
     background-color: {C.TOOLTIP_FONDO};
     color: {C.TOOLTIP_TEXTO};
@@ -481,10 +553,12 @@ QProgressDialog {{
     border: 1px solid {C.BORDE};
     border-radius: 12px;
 }}
+
 QProgressDialog QLabel {{
-    font-size: 13px;
-    font-weight: 500;
+    font-size: {fs(13)}px;
+    font-weight: 600;
 }}
+
 QProgressBar {{
     border: 1px solid {C.BORDE_SUAVE};
     background-color: {C.SUPERFICIE};
@@ -492,6 +566,7 @@ QProgressBar {{
     height: 8px;
     text-align: center;
 }}
+
 QProgressBar::chunk {{
     background-color: {C.ACENTO};
     border-radius: 5px;
@@ -568,7 +643,8 @@ class GestorTema(QObject):
 
             if not self._inicializado:
                 app.setStyle("Fusion")
-                app.setFont(QFont("Segoe UI", 10))
+                registrar_fuente_multidioma()
+                app.setFont(crear_fuente_multidioma(pixeles=fs(TAMANO_BASE)))
                 self._inicializado = True
 
             app.setPalette(_paleta())

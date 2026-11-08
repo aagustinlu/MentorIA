@@ -25,7 +25,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QEvent, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
 
-from ui.theme import Colores as C, repulir, rol
+from ui.theme import Colores as C, fs, repulir, rol
+from services.fuente_multiidioma import crear_fuente_multidioma
 
 
 RUTA_BD = "storage/sistema_estudios.db"
@@ -112,9 +113,7 @@ class CampoEntrada(QDialog):
         interior.setSpacing(10)
 
         # Fuente base
-        fuente_sistema = QFont("Segoe UI", 10)
-        if not fuente_sistema.exactMatch():
-            fuente_sistema = QFont("Arial", 10)
+        fuente_sistema = crear_fuente_multidioma(pixeles=fs(14))
 
         # Fila principal: [ + ] [ texto ] [ → ]
         self.layout_principal = QHBoxLayout()
@@ -124,8 +123,8 @@ class CampoEntrada(QDialog):
         # 1. Botón para adjuntar archivo
         self.attach_button = QPushButton("+")
         self.attach_button.setObjectName("BotonAdjuntar")
-        self.attach_button.setFont(QFont("Segoe UI", 14))
-        self.attach_button.setFixedSize(40, 40)
+        self.attach_button.setFont(crear_fuente_multidioma(pixeles=fs(18)))
+        self.attach_button.setFixedSize(44, 44)
         self.attach_button.setToolTip("Adjuntar un archivo como material de estudio")
         self.attach_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.attach_button.clicked.connect(self.adjuntar_un_archivo)
@@ -144,8 +143,8 @@ class CampoEntrada(QDialog):
         # 3. Botón para enviar
         self.send_button = QPushButton("→")
         self.send_button.setObjectName("BotonEnviar")
-        self.send_button.setFont(QFont("Segoe UI", 14))
-        self.send_button.setFixedSize(40, 40)
+        self.send_button.setFont(crear_fuente_multidioma(pixeles=fs(18)))
+        self.send_button.setFixedSize(44, 44)
         self.send_button.setToolTip("Crear curso")
         self.send_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.send_button.clicked.connect(self.procesar_envio)

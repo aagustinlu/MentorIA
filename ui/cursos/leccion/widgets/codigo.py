@@ -18,6 +18,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
+from ui.theme import fs
+
 from services.fuente_multiidioma import (
     crear_fuente_multidioma,
 )
@@ -83,9 +85,9 @@ class WidgetCodigo(QPlainTextEdit):
 
     def crear_fuente(self):
 
-        fuente = crear_fuente_multidioma(14)
+        fuente = crear_fuente_multidioma(pixeles=fs(14))
 
         fuente.setStyleHint(QFont.StyleHint.Monospace)
-        fuente.setPixelSize(14)
+        fuente.setPixelSize(fs(14))
 
         return fuente

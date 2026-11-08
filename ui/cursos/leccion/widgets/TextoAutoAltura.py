@@ -17,7 +17,7 @@ from services.fuente_multiidioma import (
     css_fuente_multidioma,
 )
 
-from ui.theme import Colores as C, al_cambiar_tema
+from ui.theme import Colores as C, al_cambiar_tema, fs
 
 
 class TextoAutoAltura(QTextBrowser):
@@ -33,7 +33,7 @@ class TextoAutoAltura(QTextBrowser):
         self.setOpenExternalLinks(True)
 
         # Configuramos la fuente multidioma.
-        fuente = crear_fuente_multidioma(15)
+        fuente = crear_fuente_multidioma(pixeles=fs(15))
 
         self.setFont(fuente)
         self.document().setDefaultFont(fuente)
@@ -67,7 +67,7 @@ class TextoAutoAltura(QTextBrowser):
         # Estilo general del widget.
         self.setStyleSheet(
             f"QTextBrowser {{ background: transparent; border: none; "
-            f"color: {C.TEXTO}; font-size: 15px; }}"
+            f"color: {C.TEXTO}; font-size: {fs(15)}px; }}"
         )
 
         familia_css = css_fuente_multidioma()

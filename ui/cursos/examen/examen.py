@@ -41,7 +41,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from models.models import ExamenModel
 from services.examen_service import PORCENTAJE_APROBACION, ResultadoExamen, SesionExamen
-from ui.theme import Colores as C, al_cambiar_tema, primario, repulir, rol, tarjeta
+from ui.theme import Colores as C, al_cambiar_tema, fs, primario, repulir, rol, tarjeta
 
 
 PAGINA_INICIO, PAGINA_PREGUNTAS, PAGINA_RESULTADOS = 0, 1, 2
@@ -86,7 +86,7 @@ def _crear_codigo(codigo: str) -> QPlainTextEdit:
 
     fuente = QFont("Consolas")
     fuente.setStyleHint(QFont.StyleHint.Monospace)
-    fuente.setPixelSize(14)
+    fuente.setPixelSize(fs(14))
     widget.setFont(fuente)
 
     widget.setPlainText(codigo)
@@ -119,7 +119,7 @@ def _crear_enunciado(texto: str, tam: int = 17) -> QWidget:
                 etiqueta = QLabel(limpio)
                 etiqueta.setWordWrap(True)
                 etiqueta.setTextFormat(Qt.TextFormat.PlainText)
-                etiqueta.setStyleSheet(f"font-size: {tam}px; font-weight: 600;")
+                etiqueta.setStyleSheet(f"font-size: {fs(tam)}px; font-weight: 600;")
                 layout.addWidget(etiqueta)
 
     return contenedor
@@ -140,7 +140,7 @@ class OpcionRespuesta(QFrame):
         layout.setSpacing(12)
 
         self.lbl_letra = QLabel(letra)
-        self.lbl_letra.setFixedWidth(20)
+        self.lbl_letra.setFixedWidth(26)
         rol(self.lbl_letra, "letra")
         # El clic debe llegar al marco, no quedarse en las etiquetas
         self.lbl_letra.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
@@ -148,7 +148,7 @@ class OpcionRespuesta(QFrame):
         self.lbl_texto = QLabel(texto)
         self.lbl_texto.setWordWrap(True)
         self.lbl_texto.setTextFormat(Qt.TextFormat.PlainText)
-        self.lbl_texto.setStyleSheet("font-size: 14px;")
+        self.lbl_texto.setStyleSheet(f"font-size: {fs(14)}px;")
         self.lbl_texto.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
         layout.addWidget(self.lbl_letra, 0, Qt.AlignmentFlag.AlignTop)
@@ -237,7 +237,7 @@ class ExamenMenu(QWidget):
 
         titulo = QLabel(self.examen.titulo)
         titulo.setWordWrap(True)
-        titulo.setStyleSheet("font-size: 24px; font-weight: 600;")
+        titulo.setStyleSheet(f"font-size: {fs(24)}px; font-weight: 600;")
 
         total = len(self.examen.preguntas)
         minimo = math.ceil(PORCENTAJE_APROBACION * total / 100)
@@ -249,7 +249,7 @@ class ExamenMenu(QWidget):
         )
         info.setWordWrap(True)
         rol(info, "suave")
-        info.setStyleSheet("font-size: 14px;")
+        info.setStyleSheet(f"font-size: {fs(14)}px;")
 
         layout.addWidget(etiqueta)
         layout.addWidget(titulo)
@@ -260,7 +260,7 @@ class ExamenMenu(QWidget):
         if previo:
             lbl_previo = QLabel(previo)
             lbl_previo.setWordWrap(True)
-            lbl_previo.setStyleSheet("font-size: 14px; font-weight: 600;")
+            lbl_previo.setStyleSheet(f"font-size: {fs(14)}px; font-weight: 600;")
             layout.addSpacing(10)
             layout.addWidget(lbl_previo)
 
@@ -476,7 +476,7 @@ class ExamenMenu(QWidget):
         rol(etiqueta, "seccion")
 
         puntaje = QLabel(f"{resultado.aciertos} de {resultado.total} correctas · {resultado.porcentaje}%")
-        puntaje.setStyleSheet("font-size: 26px; font-weight: 600;")
+        puntaje.setStyleSheet(f"font-size: {fs(26)}px; font-weight: 600;")
 
         if resultado.aprobado:
             texto, rol_veredicto = "✓ ¡Aprobado! Completaste el curso.", "ok"
@@ -489,7 +489,7 @@ class ExamenMenu(QWidget):
         veredicto = QLabel(texto)
         veredicto.setWordWrap(True)
         rol(veredicto, rol_veredicto)
-        veredicto.setStyleSheet("font-size: 15px;")
+        veredicto.setStyleSheet(f"font-size: {fs(15)}px;")
 
         layout.addWidget(etiqueta)
         layout.addWidget(puntaje)
@@ -505,7 +505,7 @@ class ExamenMenu(QWidget):
         else:
             perfecto = QLabel("Respondiste todas las preguntas correctamente.")
             rol(perfecto, "suave")
-            perfecto.setStyleSheet("font-size: 14px;")
+            perfecto.setStyleSheet(f"font-size: {fs(14)}px;")
             layout.addWidget(perfecto)
 
         layout.addStretch(1)
@@ -538,7 +538,7 @@ class ExamenMenu(QWidget):
             linea = QLabel(html)
             linea.setTextFormat(Qt.TextFormat.RichText)
             linea.setWordWrap(True)
-            linea.setStyleSheet("font-size: 13px;")
+            linea.setStyleSheet(f"font-size: {fs(13)}px;")
             layout.addWidget(linea)
 
         if pregunta.explicacion:
@@ -546,7 +546,7 @@ class ExamenMenu(QWidget):
             explicacion.setTextFormat(Qt.TextFormat.PlainText)
             explicacion.setWordWrap(True)
             rol(explicacion, "suave")
-            explicacion.setStyleSheet("font-size: 13px;")
+            explicacion.setStyleSheet(f"font-size: {fs(13)}px;")
             layout.addWidget(explicacion)
 
         if pregunta.leccion_titulo:
@@ -554,7 +554,7 @@ class ExamenMenu(QWidget):
             repasar.setTextFormat(Qt.TextFormat.PlainText)
             repasar.setWordWrap(True)
             rol(repasar, "acento")
-            repasar.setStyleSheet("font-size: 12px; font-weight: 600;")
+            repasar.setStyleSheet(f"font-size: {fs(12)}px; font-weight: 600;")
             layout.addWidget(repasar)
 
         return marco

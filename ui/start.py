@@ -16,7 +16,7 @@ class VentanaInicial(QWidget):
     def iniciar_ui(self):
         self.setWindowTitle("MentorIA")
         self.setWindowIcon(QIcon("./files/img/Mentoria Logo.png"))
-        self.resize(420, 420)
+        self.resize(480, 500)
 
         # Layout exterior: centra una tarjeta sobre el fondo
         exterior = QVBoxLayout(self)
@@ -57,7 +57,7 @@ class VentanaInicial(QWidget):
 
         self.btn_reg = QPushButton("Registrarse")
         primario(self.btn_reg)
-        self.btn_reg.setMinimumHeight(38)
+        self.btn_reg.setMinimumHeight(44)
         self.btn_reg.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # Se crea un layout horizontal para el apartado del token

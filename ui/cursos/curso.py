@@ -28,7 +28,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from models.models import CursoModel, LeccionModel
-from ui.theme import Colores as C, al_cambiar_tema, rol, tarjeta
+from ui.theme import Colores as C, al_cambiar_tema, fs, rol, tarjeta
 
 ruta_logo = PROJECT_ROOT / "files" / "img" / "Mentoria Logo.png"
 
@@ -303,7 +303,7 @@ class PanelIzquierdo(QWidget):
 
         self.titulo = QLabel(titulo)
         self.titulo.setWordWrap(True)
-        self.titulo.setStyleSheet("font-size: 18px; font-weight: 600;")
+        self.titulo.setStyleSheet(f"font-size: {fs(18)}px; font-weight: 600;")
 
         self.descripcion = QLabel(descripcion)
         self.descripcion.setWordWrap(True)

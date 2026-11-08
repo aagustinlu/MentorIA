@@ -24,7 +24,7 @@ class ConfigPanel(QWidget):
         self.config_service = ConfigService()
 
         # Ancho fijo; el alto lo da el contenido (el diálogo se ajusta a él)
-        self.setFixedWidth(280)
+        self.setFixedWidth(320)
 
 
         layout = QVBoxLayout()

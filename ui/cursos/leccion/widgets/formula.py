@@ -18,9 +18,10 @@ if str(PROJECT_ROOT) not in sys.path:
 from services.fuente_multiidioma import (
     css_fuente_multidioma,
     FUENTE_JAPONESA_PATH,
+    FUENTE_UI_PATH,
 )
 
-from ui.theme import Colores as C, al_cambiar_tema
+from ui.theme import Colores as C, al_cambiar_tema, fs
 
 
 class WidgetFormula(QWebEngineView):
@@ -82,6 +83,10 @@ class WidgetFormula(QWebEngineView):
             str(FUENTE_JAPONESA_PATH)
         ).toString()
 
+        url_fuente_ui = QUrl.fromLocalFile(
+            str(FUENTE_UI_PATH)
+        ).toString()
+
         familia_css = css_fuente_multidioma()
 
         html = f"""
@@ -107,6 +112,13 @@ class WidgetFormula(QWebEngineView):
             <style>
 
                 @font-face {{
+                    font-family: "UILocal";
+                    src: url("{url_fuente_ui}") format("truetype");
+                    font-style: normal;
+                    font-weight: 400;
+                }}
+
+                @font-face {{
                     font-family: "NotoSansJPLocal";
                     src: url("{url_fuente}") format("truetype");
                     font-style: normal;
@@ -126,10 +138,10 @@ class WidgetFormula(QWebEngineView):
 
                 body {{
                     color: {C.TEXTO};
-                    font-family: "NotoSansJPLocal", {familia_css};
+                    font-family: "UILocal", "NotoSansJPLocal", {familia_css};
                     box-sizing: border-box;
                     text-align: center;
-                    font-size: 22px;
+                    font-size: {fs(22)}px;
                     padding: 4px 0;
                     overflow-x: auto;
                     overflow-y: hidden;

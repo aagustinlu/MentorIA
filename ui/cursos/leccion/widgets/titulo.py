@@ -23,6 +23,8 @@ from services.fuente_multiidioma import (
 
 from html import unescape
 
+from ui.theme import fs
+
 
 class WidgetTitulo(QLabel):
     
@@ -33,20 +35,20 @@ class WidgetTitulo(QLabel):
         contenido = self.decodificar_caracteres_url(bloque.contenido)
         
         
-        self.setFont(crear_fuente_multidioma(26))
+        self.setFont(crear_fuente_multidioma(pixeles=fs(26)))
         self.setTextFormat(Qt.TextFormat.PlainText)
         self.setText(contenido)
 
         self.setWordWrap(True)
         self.setIndent(0)
 
-        self.setStyleSheet("""
-            QLabel {
-                font-size: 26px;
+        self.setStyleSheet(f"""
+            QLabel {{
+                font-size: {fs(26)}px;
                 font-weight: 600;
                 margin-top: 8px;
                 margin-bottom: 4px;
-            }
+            }}
         """)
 
         self.setMinimumSize(0, 0)
