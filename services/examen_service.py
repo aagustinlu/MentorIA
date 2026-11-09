@@ -186,14 +186,21 @@ def _quitar_letras(opciones: list[str]) -> list[str]:
     return opciones
 
 
-def sanear_preguntas(preguntas, n_lecciones: int) -> list[PreguntaGeneracion]:
+def _clave_enunciado(enunciado: str) -> str:
+    return " ".join(enunciado.casefold().split())
+
+
+def sanear_preguntas(preguntas, n_lecciones: int, excluir: set[str] | None = None) -> list[PreguntaGeneracion]:
     """
     Descarta o corrige lo que la IA pueda haber devuelto mal:
     enunciados vacíos, índice de respuesta fuera de rango, opciones repetidas
     o vacías, demasiadas opciones y preguntas duplicadas.
     `leccion_numero` queda en 0 si no corresponde a ninguna lección.
+
+    `excluir`: enunciados de exámenes anteriores (ya normalizados con
+    `_clave_enunciado`); las preguntas que coincidan exactamente se descartan.
     """
-    vistas: set[str] = set()
+    vistas: set[str] = set(excluir or ())
     limpias: list[PreguntaGeneracion] = []
 
     for p in preguntas:
@@ -227,7 +234,7 @@ def sanear_preguntas(preguntas, n_lecciones: int) -> list[PreguntaGeneracion]:
             unicas = [unicas[i] for i in conservar]
             idx = conservar.index(idx)
 
-        clave = " ".join(enunciado.casefold().split())
+        clave = _clave_enunciado(enunciado)
         if clave in vistas:
             continue
         vistas.add(clave)

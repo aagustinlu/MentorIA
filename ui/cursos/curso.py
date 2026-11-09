@@ -131,10 +131,12 @@ class GenerarExamenWorker(QThread):
     terminado = pyqtSignal(object)   # ExamenModel o None
     error = pyqtSignal(str)
 
-    def __init__(self, curso_id: int, db):
+    def __init__(self, curso_id: int, db, renovar: bool = False):
+        """renovar=True: nuevo examen con preguntas distintas a las de los anteriores."""
         super().__init__()
         self.curso_id = curso_id
         self.db = db
+        self.renovar = renovar
 
     def run(self):
         try:
@@ -165,13 +167,15 @@ class GenerarExamenWorker(QThread):
 
 
             gestor = GestorDeIA(api_key=api_key)
-            preguntas = gestor.generar_examen(curso.titulo, lecciones)
+            evitar = self.db.obtener_enunciados_examenes(self.curso_id) if self.renovar else None
+            preguntas = gestor.generar_examen(curso.titulo, lecciones, evitar=evitar)
 
             examen_id = self.db.guardar_examen(
                 self.curso_id,
                 f"Evaluación final: {curso.titulo}",
                 preguntas,
                 [leccion.id for leccion in lecciones],
+                reemplazar=not self.renovar,   # al renovar se conserva el historial de intentos
             )
             if examen_id is None:
                 self.error.emit("No se pudo guardar la evaluación en la base de datos.")
@@ -521,7 +525,7 @@ class PanelDerecho(QGraphicsView):
             return
 
         
-        self._mostrar_progreso("Generando lección con IA…")
+        self._mostrar_progreso("Generando lección...")
 
         self._worker = GenerarLeccionWorker(leccion_id, self.db)
         self._worker.terminado.connect(self._on_leccion_generada)
@@ -618,7 +622,7 @@ class PanelDerecho(QGraphicsView):
     # ── Evaluación final ──────────────────────────────────────────────────────
 
     def _abrir_examen(self):
-        """Abre la evaluación final: la carga desde BD o, la primera vez, la genera con IA."""
+        """Abre la evaluación final: la carga desde BD o, la primera vez, la genera."""
         if self.db is None or self.curso_id is None:
             return
 
@@ -628,31 +632,48 @@ class PanelDerecho(QGraphicsView):
             return
 
         examen = self.db.obtener_examen(self.curso_id)
-        if examen is not None:
-            self._mostrar_examen(examen)
-        else:
+        if examen is None:
             self._generar_examen()
+        elif self.db.examen_debe_renovarse(self.curso_id):
+            # El último intento se desaprobó (y la ventana se cerró sin reintentar):
+            # el próximo intento es con preguntas nuevas.
+            self._generar_examen(renovar=True)
+        else:
+            self._mostrar_examen(examen)
 
-    def _generar_examen(self):
+    def _generar_examen(self, renovar: bool = False):
         if self._worker and self._worker.isRunning():
             QMessageBox.information(
                 self, "Generando", "Ya hay algo generándose, espera un momento."
             )
             return
 
-        self._mostrar_progreso("Generando la evaluación final con IA…")
+        self._mostrar_progreso(
+            "Generando una nueva evaluación..."
+            if renovar else "Generando la evaluación final..."
+        )
 
-        self._worker = GenerarExamenWorker(self.curso_id, self.db)
+        self._worker = GenerarExamenWorker(self.curso_id, self.db, renovar=renovar)
         self._worker.terminado.connect(self._on_examen_generado)
         self._worker.error.connect(self._on_error_examen)
         self._worker.start()
 
     def _on_examen_generado(self, examen):
         self._cerrar_progreso()
-        if examen:
-            self._mostrar_examen(examen)
-        else:
+        if not examen:
             QMessageBox.critical(self, "Error", "No se pudo generar la evaluación final.")
+            return
+
+        # Si venía de una ventana de examen (reintento tras fallar), se cierra la vieja
+        # solo ahora que la nueva ya está lista.
+        anterior = self._ventana_examen
+        if anterior is not None:
+            anterior.close()
+            if anterior in self._ventanas_leccion:
+                self._ventanas_leccion.remove(anterior)
+            self._ventana_examen = None
+
+        self._mostrar_examen(examen)
 
     def _on_error_examen(self, mensaje: str):
         self._cerrar_progreso()
@@ -667,6 +688,7 @@ class PanelDerecho(QGraphicsView):
             on_finalizar=lambda resultado, examen_id=examen.id: self._finalizar_examen(
                 examen_id, resultado
             ),
+            on_nuevo_examen=lambda: self._generar_examen(renovar=True),
         )
         ventana.show()
         self._ventana_examen = ventana

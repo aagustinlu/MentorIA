@@ -720,16 +720,23 @@ class BaseDatosProyecto:
         cursor.execute(f"DELETE FROM exam_questions WHERE exam_id IN ({ids_examenes})", (curso_id,))
         cursor.execute("DELETE FROM exams WHERE course_id = ?", (curso_id,))
 
-    def guardar_examen(self, curso_id: int, titulo: str, preguntas, ids_lecciones: list[int]):
+    def guardar_examen(self, curso_id: int, titulo: str, preguntas, ids_lecciones: list[int],
+                       reemplazar: bool = True):
         """
-        Guarda el examen generado por la IA, reemplazando el anterior del curso.
+        Guarda el examen generado por la IA.
         'preguntas' es una lista de PreguntaGeneracion; 'leccion_numero' (desde 1)
         se traduce al id real con 'ids_lecciones'. Devuelve el id del examen o None.
+
+        reemplazar=True  -> borra el examen anterior del curso (con sus intentos).
+        reemplazar=False -> conserva los exámenes anteriores (y sus intentos): se usa
+                            al renovar el examen tras un intento fallido. `obtener_examen`
+                            siempre devuelve el más reciente.
         """
         try:
             with self._conectar() as conexion:
                 cursor = conexion.cursor()
-                self._borrar_examenes_curso(cursor, curso_id)
+                if reemplazar:
+                    self._borrar_examenes_curso(cursor, curso_id)
 
                 cursor.execute(
                     "INSERT INTO exams (course_id, titulo) VALUES (?, ?)",
@@ -810,6 +817,49 @@ class BaseDatosProyecto:
         except (sqlite3.Error, ValueError) as e:
             print(f"[BD] Error al obtener examen del curso {curso_id}: {e}")
             return None
+
+    def obtener_enunciados_examenes(self, curso_id: int, limite: int = 200) -> dict[int | None, list[str]]:
+        """
+        Enunciados de todas las preguntas de los exámenes anteriores del curso,
+        agrupados por `leccion_id` (None = sin lección). Sirve para pedirle a la IA
+        que no los repita al generar un examen nuevo.
+        """
+        sql = """
+            SELECT q.leccion_id, q.enunciado
+            FROM exam_questions q
+            JOIN exams e ON e.id = q.exam_id
+            WHERE e.course_id = ?
+            ORDER BY q.id DESC
+            LIMIT ?
+        """
+        agrupados: dict[int | None, list[str]] = {}
+        try:
+            with self._conectar() as conexion:
+                for leccion_id, enunciado in conexion.execute(sql, (curso_id, limite)).fetchall():
+                    agrupados.setdefault(leccion_id, []).append(enunciado)
+        except sqlite3.Error as e:
+            print(f"[BD] Error al obtener preguntas previas del curso {curso_id}: {e}")
+        return agrupados
+
+    def examen_debe_renovarse(self, curso_id: int) -> bool:
+        """
+        True si el examen actual del curso ya se intentó, el último intento fue
+        desaprobado y el curso todavía no está aprobado: toca generar uno nuevo.
+        """
+        sql = """
+            SELECT a.aprobado
+            FROM exam_attempts a
+            WHERE a.exam_id = (SELECT id FROM exams WHERE course_id = ? ORDER BY id DESC LIMIT 1)
+            ORDER BY a.id DESC
+            LIMIT 1
+        """
+        try:
+            with self._conectar() as conexion:
+                fila = conexion.execute(sql, (curso_id,)).fetchone()
+            return fila is not None and not fila[0] and not self.examen_aprobado(curso_id)
+        except sqlite3.Error as e:
+            print(f"[BD] Error al consultar si el examen del curso {curso_id} debe renovarse: {e}")
+            return False
 
     def registrar_intento_examen(self, examen_id: int, aciertos: int, total: int, aprobado: bool) -> bool:
         sql = "INSERT INTO exam_attempts (exam_id, aciertos, total, aprobado) VALUES (?, ?, ?, ?)"

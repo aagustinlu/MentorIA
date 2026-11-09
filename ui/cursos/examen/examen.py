@@ -173,18 +173,23 @@ class OpcionRespuesta(QFrame):
 
 class ExamenMenu(QWidget):
 
-    def __init__(self, examen: ExamenModel, estado: dict | None = None, on_finalizar=None):
+    def __init__(self, examen: ExamenModel, estado: dict | None = None, on_finalizar=None,
+                 on_nuevo_examen=None):
         """
-        examen:       ExamenModel con sus preguntas.
-        estado:       resumen de intentos previos {"intentos", "aprobado", "mejor"}.
-        on_finalizar: callable(ResultadoExamen) -> bool que persiste el intento
-                      y actualiza el progreso del curso.
+        examen:          ExamenModel con sus preguntas.
+        estado:          resumen de intentos previos {"intentos", "aprobado", "mejor"}.
+        on_finalizar:    callable(ResultadoExamen) -> bool que persiste el intento
+                         y actualiza el progreso del curso.
+        on_nuevo_examen: callable() que genera un examen nuevo (preguntas distintas)
+                         y reemplaza esta ventana. Si es None, «Reintentar» repite
+                         las mismas preguntas.
         """
         super().__init__()
 
         self.examen = examen
         self.estado = estado or {}
         self.on_finalizar = on_finalizar
+        self.on_nuevo_examen = on_nuevo_examen
 
         self.sesion: SesionExamen | None = None
         self.indice = 0
@@ -321,9 +326,11 @@ class ExamenMenu(QWidget):
         primario(self.btn_siguiente)
         self.btn_siguiente.clicked.connect(self.siguiente_o_finalizar)
 
-        self.btn_reintentar = QPushButton("Reintentar")
+        self.btn_reintentar = QPushButton(
+            "Reintentar" if self.on_nuevo_examen else "Reintentar"
+        )
         primario(self.btn_reintentar)
-        self.btn_reintentar.clicked.connect(lambda _checked=False: self.comenzar(True))
+        self.btn_reintentar.clicked.connect(self._reintentar)
 
         self.btn_cerrar = QPushButton("Cerrar")
         self.btn_cerrar.clicked.connect(self.close)
@@ -337,6 +344,7 @@ class ExamenMenu(QWidget):
             boton.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_comenzar.setMinimumWidth(150)
         self.btn_siguiente.setMinimumWidth(150)
+        self.btn_reintentar.setMinimumWidth(240)
 
         layout = QHBoxLayout()
         layout.setSpacing(12)
@@ -375,6 +383,13 @@ class ExamenMenu(QWidget):
         self._en_curso = True
         self._ir_a(PAGINA_PREGUNTAS)
         self.mostrar_pregunta()
+
+    def _reintentar(self, _checked: bool = False) -> None:
+        """Tras un intento fallido: examen nuevo con preguntas distintas (o el mismo, si no hay generador)."""
+        if self.on_nuevo_examen is not None:
+            self.on_nuevo_examen()
+        else:
+            self.comenzar(True)
 
     def mostrar_pregunta(self) -> None:
         layout = self.layout_pregunta
@@ -483,7 +498,8 @@ class ExamenMenu(QWidget):
         else:
             texto = (
                 f"No alcanzaste el {PORCENTAJE_APROBACION}% necesario. "
-                "Repasa los temas indicados e inténtalo de nuevo."
+                "Repasa los temas indicados e inténtalo de nuevo"
+                + (": el próximo intento tendrá preguntas nuevas." if self.on_nuevo_examen else ".")
             )
             rol_veredicto = "error"
         veredicto = QLabel(texto)

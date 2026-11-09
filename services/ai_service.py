@@ -36,6 +36,7 @@ from models.models import (
     PreguntaGeneracion,
 )
 from services.examen_service import (
+    _clave_enunciado,
     armar_lotes,
     repartir_preguntas,
     sanear_preguntas,
@@ -253,9 +254,18 @@ ESTRUCTURA DE SALIDA (ESQUEMA PYDANTIC):
             prompt=prompt,
         )
 
-    def generar_examen(self, curso_titulo: str, lecciones: list) -> list[PreguntaGeneracion]:
+    def generar_examen(
+        self,
+        curso_titulo: str,
+        lecciones: list,
+        evitar: dict[int | None, list[str]] | None = None,
+    ) -> list[PreguntaGeneracion]:
         """
         Genera las preguntas de opción múltiple de la evaluación final.
+
+        `evitar` (opcional): enunciados de exámenes anteriores agrupados por id de
+        lección. Se le piden a la IA como «no repetir» y además se descartan si
+        vuelven a salir idénticos. Se usa al renovar el examen tras un intento fallido.
 
         `lecciones` es la lista de LeccionModel (con páginas y bloques) del curso,
         en orden. Las preguntas se basan únicamente en ese contenido. La cantidad
@@ -270,7 +280,13 @@ ESTRUCTURA DE SALIDA (ESQUEMA PYDANTIC):
             palabras = len(texto.split())
             if palabras:
                 items.append(
-                    {"numero": numero, "titulo": leccion.titulo, "texto": texto, "palabras": palabras}
+                    {
+                        "numero": numero,
+                        "titulo": leccion.titulo,
+                        "texto": texto,
+                        "palabras": palabras,
+                        "previas": (evitar or {}).get(leccion.id, []),
+                    }
                 )
 
         if not items:
@@ -283,7 +299,10 @@ ESTRUCTURA DE SALIDA (ESQUEMA PYDANTIC):
         for lote in armar_lotes(items):
             preguntas.extend(self._generar_preguntas_lote(curso_titulo, lote))
 
-        preguntas = sanear_preguntas(preguntas, n_lecciones=len(lecciones))
+        previas = {
+            _clave_enunciado(e) for enunciados in (evitar or {}).values() for e in enunciados
+        }
+        preguntas = sanear_preguntas(preguntas, n_lecciones=len(lecciones), excluir=previas)
         if not preguntas:
             raise ValueError("La IA no devolvió preguntas válidas. Inténtalo de nuevo.")
 
@@ -299,6 +318,21 @@ ESTRUCTURA DE SALIDA (ESQUEMA PYDANTIC):
         material = "\n\n".join(
             f"=== LECCIÓN {it['numero']}: {it['titulo']} ===\n{it['texto']}" for it in lote
         )
+
+        bloques_previas = []
+        for it in lote:
+            if it["previas"]:
+                lista = "\n".join(f"  * {e[:200]}" for e in it["previas"][:12])
+                bloques_previas.append(f"- Lección {it['numero']} «{it['titulo']}»:\n{lista}")
+        if bloques_previas:
+            previas = (
+                "\nPREGUNTAS YA USADAS EN EVALUACIONES ANTERIORES (NO las repitas ni las "
+                "reformules; evalúa otros conceptos, otros ejemplos u otros ángulos de la misma lección):\n"
+                + "\n".join(bloques_previas)
+                + "\n"
+            )
+        else:
+            previas = ""
 
         prompt = f"""
 Eres un profesor experto en evaluación. Debes crear preguntas de opción múltiple para la
@@ -331,7 +365,7 @@ REGLAS DE LAS PREGUNTAS:
 CANTIDAD:
 Genera exactamente {total} preguntas con esta distribución:
 {distribucion}
-
+{previas}
 <MATERIAL_LECCIONES>
 {material}
 </MATERIAL_LECCIONES>
