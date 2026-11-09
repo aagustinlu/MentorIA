@@ -2,7 +2,6 @@
 Gestor de IA basado en Groq y Pydantic.
 
 Dependencias:
-    pip install groq pydantic
 
 Para leer PDF:
     pip install pypdf
@@ -271,8 +270,6 @@ ESTRUCTURA DE SALIDA (ESQUEMA PYDANTIC):
         en orden. Las preguntas se basan únicamente en ese contenido. La cantidad
         depende de cuánto material haya (ver `repartir_preguntas`) y cada pregunta
         indica en `leccion_numero` la posición (desde 1) de su lección en `lecciones`.
-
-
         """
         items = []
         for numero, leccion in enumerate(lecciones, start=1):

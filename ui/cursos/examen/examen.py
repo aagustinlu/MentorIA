@@ -174,7 +174,7 @@ class OpcionRespuesta(QFrame):
 class ExamenMenu(QWidget):
 
     def __init__(self, examen: ExamenModel, estado: dict | None = None, on_finalizar=None,
-                 on_nuevo_examen=None):
+                 on_nuevo_examen=None, on_certificado=None):
         """
         examen:          ExamenModel con sus preguntas.
         estado:          resumen de intentos previos {"intentos", "aprobado", "mejor"}.
@@ -183,6 +183,8 @@ class ExamenMenu(QWidget):
         on_nuevo_examen: callable() que genera un examen nuevo (preguntas distintas)
                          y reemplaza esta ventana. Si es None, «Reintentar» repite
                          las mismas preguntas.
+        on_certificado:  callable(parent_widget) que guarda el certificado del curso.
+                         Si es None, no se muestra el botón de certificado.
         """
         super().__init__()
 
@@ -190,6 +192,7 @@ class ExamenMenu(QWidget):
         self.estado = estado or {}
         self.on_finalizar = on_finalizar
         self.on_nuevo_examen = on_nuevo_examen
+        self.on_certificado = on_certificado
 
         self.sesion: SesionExamen | None = None
         self.indice = 0
@@ -332,12 +335,15 @@ class ExamenMenu(QWidget):
         primario(self.btn_reintentar)
         self.btn_reintentar.clicked.connect(self._reintentar)
 
+        self.btn_certificado = QPushButton("Descargar certificado")
+        self.btn_certificado.clicked.connect(self._descargar_certificado)
+
         self.btn_cerrar = QPushButton("Cerrar")
         self.btn_cerrar.clicked.connect(self.close)
 
         botones = (
             self.btn_comenzar, self.btn_anterior, self.btn_siguiente,
-            self.btn_reintentar, self.btn_cerrar,
+            self.btn_reintentar, self.btn_certificado, self.btn_cerrar,
         )
         for boton in botones:
             boton.setMinimumWidth(110)
@@ -345,6 +351,7 @@ class ExamenMenu(QWidget):
         self.btn_comenzar.setMinimumWidth(150)
         self.btn_siguiente.setMinimumWidth(150)
         self.btn_reintentar.setMinimumWidth(240)
+        self.btn_certificado.setMinimumWidth(200)
 
         layout = QHBoxLayout()
         layout.setSpacing(12)
@@ -354,6 +361,7 @@ class ExamenMenu(QWidget):
         layout.addWidget(self.lbl_progreso)
         layout.addWidget(self.btn_siguiente)
         layout.addWidget(self.btn_reintentar)
+        layout.addWidget(self.btn_certificado)
         layout.addWidget(self.btn_cerrar)
         layout.addStretch()
         return layout
@@ -370,6 +378,14 @@ class ExamenMenu(QWidget):
         self.lbl_progreso.setVisible(en_preguntas)
         self.btn_siguiente.setVisible(en_preguntas)
         self.btn_reintentar.setVisible(en_resultados and not aprobado)
+
+        # Certificado: al aprobar (resultados) o, en el inicio, si el curso ya estaba aprobado.
+        # Es la acción principal al aprobar; en el inicio queda en segundo plano.
+        hay_certificado = (en_resultados and aprobado) or (en_inicio and bool(self.estado.get("aprobado")))
+        self.btn_certificado.setVisible(self.on_certificado is not None and hay_certificado)
+        self.btn_certificado.setProperty("primario", en_resultados)
+        repulir(self.btn_certificado)
+
         self.btn_cerrar.setVisible(en_resultados)
 
     # ------------------------------------------------------
@@ -383,6 +399,10 @@ class ExamenMenu(QWidget):
         self._en_curso = True
         self._ir_a(PAGINA_PREGUNTAS)
         self.mostrar_pregunta()
+
+    def _descargar_certificado(self, _checked: bool = False) -> None:
+        if self.on_certificado is not None:
+            self.on_certificado(self)
 
     def _reintentar(self, _checked: bool = False) -> None:
         """Tras un intento fallido: examen nuevo con preguntas distintas (o el mismo, si no hay generador)."""
@@ -495,6 +515,8 @@ class ExamenMenu(QWidget):
 
         if resultado.aprobado:
             texto, rol_veredicto = "✓ ¡Aprobado! Completaste el curso.", "ok"
+            if self.on_certificado is not None:
+                texto += " Ya puedes descargar tu certificado."
         else:
             texto = (
                 f"No alcanzaste el {PORCENTAJE_APROBACION}% necesario. "

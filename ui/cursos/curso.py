@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QMessageBox,
     QProgressDialog,
+    QPushButton,
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QBrush, QColor, QPainter, QPen, QIcon
@@ -28,7 +29,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from models.models import CursoModel, LeccionModel
-from ui.theme import Colores as C, al_cambiar_tema, fs, rol, tarjeta
+from ui.theme import Colores as C, al_cambiar_tema, fs, primario, rol, tarjeta
+from ui.cursos.certificado_ui import descargar_certificado
 
 ruta_logo = PROJECT_ROOT / "files" / "img" / "Mentoria Logo.png"
 
@@ -281,6 +283,9 @@ class NodoCircular(QGraphicsEllipseItem):
 # ── Panel izquierdo (info del curso) ─────────────────────────────────────────
 
 class PanelIzquierdo(QWidget):
+    # Se emite al pulsar «Descargar certificado»
+    certificado_solicitado = pyqtSignal()
+
     def __init__(self, curso):
         super().__init__()
         self.curso = curso
@@ -318,6 +323,17 @@ class PanelIzquierdo(QWidget):
         layout.addWidget(self.titulo)
         layout.addWidget(self.descripcion)
         layout.addStretch(1)
+
+        # Solo visible cuando el curso está aprobado (lo decide CursoMenu)
+        self.btn_certificado = QPushButton("Descargar certificado")
+        primario(self.btn_certificado)
+        self.btn_certificado.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_certificado.clicked.connect(lambda _checked=False: self.certificado_solicitado.emit())
+        self.btn_certificado.hide()
+        layout.addWidget(self.btn_certificado)
+
+    def mostrar_certificado(self, visible: bool) -> None:
+        self.btn_certificado.setVisible(visible)
 
 
 # ── Panel derecho (mapa de nodos) ─────────────────────────────────────────────
@@ -689,6 +705,7 @@ class PanelDerecho(QGraphicsView):
                 examen_id, resultado
             ),
             on_nuevo_examen=lambda: self._generar_examen(renovar=True),
+            on_certificado=lambda parent: descargar_certificado(parent, self.db, self.curso_id),
         )
         ventana.show()
         self._ventana_examen = ventana
@@ -701,6 +718,10 @@ class PanelDerecho(QGraphicsView):
             examen_id, resultado.aciertos, resultado.total, resultado.aprobado
         ):
             return False
+
+        if resultado.aprobado:
+            # Queda registrado con la fecha de esta primera aprobación (si ya existía, no hace nada)
+            self.db.obtener_o_emitir_certificado(self.curso_id)
 
         self.crear_camino_nodos()
         self.examen_actualizado.emit()
@@ -766,10 +787,25 @@ class CursoMenu(QWidget):
         self.layout_derecho.leccion_completada.connect(self.progreso_cambiado)
         self.layout_derecho.examen_actualizado.connect(self.progreso_cambiado)
 
+        # Botón de certificado: aparece cuando el examen final está aprobado
+        self.layout_izquierdo.certificado_solicitado.connect(self._descargar_certificado)
+        self.layout_derecho.examen_actualizado.connect(self._actualizar_boton_certificado)
+        self._actualizar_boton_certificado()
+
         layout_principal.addWidget(self.layout_izquierdo, stretch=1)
         layout_principal.addWidget(self.layout_derecho, stretch=10)
 
         self.setLayout(layout_principal)
+
+    def _actualizar_boton_certificado(self) -> None:
+        curso_id = self.curso_model.id
+        aprobado = (
+            self.db is not None and curso_id is not None and self.db.examen_aprobado(curso_id)
+        )
+        self.layout_izquierdo.mostrar_certificado(bool(aprobado))
+
+    def _descargar_certificado(self) -> None:
+        descargar_certificado(self, self.db, self.curso_model.id)
 
     def closeEvent(self, event):
         # Al cerrar el curso se cierran también las lecciones que abrió

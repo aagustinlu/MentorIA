@@ -1,8 +1,10 @@
 import json
+import secrets
+from datetime import datetime
 import sqlite3
 from pathlib import Path
 
-from models.models import CursoModel, ExamenModel, LeccionModel, PreguntaModel
+from models.models import CertificadoModel, CursoModel, ExamenModel, LeccionModel, PreguntaModel
 
 
 # Modelos auxiliares para estado de lecciones (compatibles con la UI)
@@ -133,6 +135,19 @@ class BaseDatosProyecto:
                 aprobado INTEGER NOT NULL DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(exam_id) REFERENCES exams(id)
+            );
+            ''',
+            '''
+            CREATE TABLE IF NOT EXISTS certificados (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                course_id INTEGER NOT NULL UNIQUE,
+                codigo TEXT NOT NULL UNIQUE,
+                nombre TEXT NOT NULL,
+                curso_titulo TEXT NOT NULL,
+                aciertos INTEGER NOT NULL,
+                total INTEGER NOT NULL,
+                emitido_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(course_id) REFERENCES cursos(id)
             );
             ''',
         ]
@@ -426,6 +441,7 @@ class BaseDatosProyecto:
                 )
                 cursor.execute("DELETE FROM lecciones WHERE curso_id = ?", (curso_id,))
                 self._borrar_examenes_curso(cursor, curso_id)
+                cursor.execute("DELETE FROM certificados WHERE course_id = ?", (curso_id,))
                 cursor.execute("DELETE FROM cursos WHERE id = ?", (curso_id,))
                 eliminado = cursor.rowcount > 0
 
@@ -918,6 +934,94 @@ class BaseDatosProyecto:
         except sqlite3.Error as e:
             print(f"[BD] Error al obtener estado del examen del curso {curso_id}: {e}")
         return estado
+
+
+    # --- Certificados de finalización ---
+
+    _COLUMNAS_CERTIFICADO = (
+        "id, course_id, codigo, nombre, curso_titulo, aciertos, total, emitido_at"
+    )
+
+    @staticmethod
+    def _fila_a_certificado(fila) -> CertificadoModel:
+        return CertificadoModel(
+            id=fila[0],
+            curso_id=fila[1],
+            codigo=fila[2],
+            nombre=fila[3],
+            curso_titulo=fila[4],
+            aciertos=fila[5],
+            total=fila[6],
+            emitido_at=str(fila[7]),
+        )
+
+    def obtener_certificado(self, curso_id: int) -> CertificadoModel | None:
+        """Certificado ya emitido para el curso, o None si todavía no existe."""
+        sql = f"SELECT {self._COLUMNAS_CERTIFICADO} FROM certificados WHERE course_id = ?"
+        try:
+            with self._conectar() as conexion:
+                fila = conexion.execute(sql, (curso_id,)).fetchone()
+            return self._fila_a_certificado(fila) if fila else None
+        except sqlite3.Error as e:
+            print(f"[BD] Error al obtener el certificado del curso {curso_id}: {e}")
+            return None
+
+    def obtener_o_emitir_certificado(self, curso_id: int) -> CertificadoModel | None:
+        """
+        Devuelve el certificado del curso; si no existe pero el examen final ya
+        está aprobado, lo emite en ese momento (cubre cursos aprobados antes de
+        que existieran los certificados). Devuelve None si el curso no está aprobado.
+
+        Hay un solo certificado por curso: aprobar de nuevo no genera otro, así
+        el código y la fecha siguen siendo los de la primera aprobación.
+        """
+        existente = self.obtener_certificado(curso_id)
+        if existente is not None:
+            return existente
+        if not self.examen_aprobado(curso_id):
+            return None
+
+        sql_curso = "SELECT titulo FROM cursos WHERE id = ?"
+        # El intento aprobado con mejor puntaje (a igualdad, el primero)
+        sql_intento = """
+            SELECT a.aciertos, a.total
+            FROM exam_attempts a
+            JOIN exams e ON e.id = a.exam_id
+            WHERE e.course_id = ? AND a.aprobado = 1 AND a.total > 0
+            ORDER BY CAST(a.aciertos AS REAL) / a.total DESC, a.id ASC
+            LIMIT 1
+        """
+        sql_insert = """
+            INSERT OR IGNORE INTO certificados
+                (course_id, codigo, nombre, curso_titulo, aciertos, total)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """
+        try:
+            with self._conectar() as conexion:
+                curso = conexion.execute(sql_curso, (curso_id,)).fetchone()
+                intento = conexion.execute(sql_intento, (curso_id,)).fetchone()
+                if curso is None or intento is None:
+                    return None
+
+                perfil = conexion.execute("SELECT nombre FROM perfil_usuario LIMIT 1").fetchone()
+                nombre = (perfil[0] if perfil and perfil[0] else "").strip() or "Estudiante"
+
+                # El código lleva el año y 8 hex aleatorios; si colisionara (casi
+                # imposible), UNIQUE hace que el INSERT se ignore y se reintenta.
+                for _ in range(5):
+                    codigo = f"MENT-{datetime.now().year}-{secrets.token_hex(4).upper()}"
+                    cursor = conexion.execute(
+                        sql_insert,
+                        (curso_id, codigo, nombre, curso[0], intento[0], intento[1]),
+                    )
+                    if cursor.rowcount:
+                        break
+                conexion.commit()
+        except sqlite3.Error as e:
+            print(f"[BD] Error al emitir el certificado del curso {curso_id}: {e}")
+            return None
+
+        return self.obtener_certificado(curso_id)
 
 
 # --- PRUEBA DE FUNCIONAMIENTO ---

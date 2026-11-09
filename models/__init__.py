@@ -24,7 +24,8 @@ from .models import (
     PaginaModel,
     BloqueModel,
     PreguntaModel,
-    ExamenModel)
+    ExamenModel,
+    CertificadoModel)
 
 __all__ = [
     "CursoGeneracion",
@@ -39,6 +40,7 @@ __all__ = [
     "PaginaModel",
     "BloqueModel",
     "PreguntaModel",
-    "ExamenModel"
+    "ExamenModel",
+    "CertificadoModel",
 ]
 

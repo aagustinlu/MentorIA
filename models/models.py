@@ -268,3 +268,43 @@ class ExamenModel(BaseModel):
     preguntas: list[PreguntaModel] = Field(
         default_factory=list
     )
+
+
+class CertificadoModel(BaseModel):
+
+    id: Optional[int] = Field(
+        default=None,
+        description="ID del certificado en la base de datos."
+    )
+
+    curso_id: int = Field(
+        description="Curso al que corresponde el certificado."
+    )
+
+    codigo: str = Field(
+        description="Código único del certificado (ej. MENT-2026-9F3A1C7E)."
+    )
+
+    nombre: str = Field(
+        description="Nombre del estudiante al momento de emitirlo."
+    )
+
+    curso_titulo: str = Field(
+        description="Título del curso al momento de emitirlo."
+    )
+
+    aciertos: int = Field(
+        description="Respuestas correctas del examen con el que se aprobó."
+    )
+
+    total: int = Field(
+        description="Total de preguntas de ese examen."
+    )
+
+    emitido_at: str = Field(
+        description="Fecha de emisión (UTC, formato 'YYYY-MM-DD HH:MM:SS')."
+    )
+
+    @property
+    def porcentaje(self) -> int:
+        return round(100 * self.aciertos / self.total) if self.total else 0
