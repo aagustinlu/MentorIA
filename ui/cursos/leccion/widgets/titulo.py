@@ -34,7 +34,6 @@ class WidgetTitulo(QLabel):
 
         contenido = self.decodificar_caracteres_url(bloque.contenido)
         
-        
         self.setFont(crear_fuente_multidioma(pixeles=fs(26)))
         self.setTextFormat(Qt.TextFormat.PlainText)
         self.setText(contenido)
@@ -68,7 +67,9 @@ class WidgetTitulo(QLabel):
         contenido_decodificado = unescape(contenido_original)
 
         # Reparamos posibles errores de codificación UTF-8.
-        contenido = reparar_mojibake_utf8(contenido_decodificado)
+        contenido_reparado = reparar_mojibake_utf8(contenido_decodificado)
 
+        # Ignorar / Eliminar etiquetas HTML
+        contenido_sin_html = re.sub(r'<[^>]+>', '', contenido_reparado)
         
-        return contenido
+        return contenido_sin_html
