@@ -42,6 +42,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from models.models import ExamenModel
 from services.examen_service import PORCENTAJE_APROBACION, ResultadoExamen, SesionExamen
 from ui.theme import Colores as C, al_cambiar_tema, fs, primario, repulir, rol, tarjeta
+from services import SoundPlayer
 
 
 PAGINA_INICIO, PAGINA_PREGUNTAS, PAGINA_RESULTADOS = 0, 1, 2
@@ -482,13 +483,9 @@ class ExamenMenu(QWidget):
         self._en_curso = False
 
         if self.on_finalizar is not None and not self.on_finalizar(resultado):
-            QMessageBox.warning(
-                self,
-                "No se pudo guardar",
-                "No se pudo guardar el resultado del examen. Puedes verlo ahora, "
-                "pero no quedará registrado.",
-            )
+            QMessageBox.warning(...)
 
+        SoundPlayer().play("exito" if resultado.aprobado else "error")
         self._mostrar_resultados(resultado)
 
     # ------------------------------------------------------

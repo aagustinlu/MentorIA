@@ -8,6 +8,7 @@ from .fuente_multiidioma import (
     css_fuente_multidioma,
     reparar_mojibake_utf8,
 )
+from .efectos_sonido import SoundPlayer
 
 from .repositories.curso_repository import CursoRepository
 
@@ -22,6 +23,7 @@ __all__ = [
     "crear_fuente_multidioma",
     "css_fuente_multidioma",
     "reparar_mojibake_utf8",
+    "Player"
     
     # Repositiorios
     

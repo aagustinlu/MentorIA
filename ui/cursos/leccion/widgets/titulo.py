@@ -69,7 +69,7 @@ class WidgetTitulo(QLabel):
         # Reparamos posibles errores de codificación UTF-8.
         contenido_reparado = reparar_mojibake_utf8(contenido_decodificado)
 
-        # Ignorar / Eliminar etiquetas HTML
+        # Ignorar / Eliminar etiquetas HTML usando expresiones regulares
         contenido_sin_html = re.sub(r'<[^>]+>', '', contenido_reparado)
         
         return contenido_sin_html

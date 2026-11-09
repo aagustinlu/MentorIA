@@ -251,9 +251,9 @@ class MostrarPagina(QWidget):
         self.PaginaModel = pagina_model
 
         self.widgets = {
+            "titulo": WidgetTitulo,
             "texto": WidgetTexto,
             "codigo": WidgetCodigo,
-            "titulo": WidgetTitulo,
             "formula": WidgetFormula,
         }
 
