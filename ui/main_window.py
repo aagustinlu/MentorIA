@@ -447,8 +447,6 @@ class PanelDerecho(QWidget):
             Qt.ItemDataRole.UserRole
         )
 
-        print(f"Curso seleccionado: {curso_id}")
-
         curso = self.db.obtener_curso(curso_id)
 
         if not self._mostrar_curso_menu(curso):

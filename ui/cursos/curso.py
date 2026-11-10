@@ -318,10 +318,16 @@ class PanelIzquierdo(QWidget):
         self.descripcion.setWordWrap(True)
         self.descripcion.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
         rol(self.descripcion, "descripcion")
-
+        
+        self.tiempo_estimado = QLabel(f"Tiempo estimado: \n{len(self.curso.lecciones) * 5} minutos")
+        self.tiempo_estimado.setWordWrap(True)
+        self.tiempo_estimado.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        
+        
         layout.addWidget(self.etiqueta)
         layout.addWidget(self.titulo)
         layout.addWidget(self.descripcion)
+        layout.addWidget(self.tiempo_estimado)
         layout.addStretch(1)
 
         # Solo visible cuando el curso está aprobado (lo decide CursoMenu)
