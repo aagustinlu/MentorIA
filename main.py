@@ -5,10 +5,10 @@ import sys
 
 from services.database import BaseDatosProyecto
 from ui.start import VentanaInicial
-from ui.main_window import VentanaPrincipal
+from ui.ventana_principal import VentanaPrincipal
 from ui.theme import TEMA_POR_DEFECTO, aplicar_tema
 
- 
+
 # Configurar Qt antes de crear QApplication
 QCoreApplication.setAttribute(
     Qt.ApplicationAttribute.AA_ShareOpenGLContexts
