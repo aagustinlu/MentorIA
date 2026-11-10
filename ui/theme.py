@@ -360,6 +360,33 @@ QPushButton[primario="true"]:disabled {{
     color: {C.TEXTO_SOBRE_ACENTO_DESACTIVADO};
 }}
 
+/* ── Navegación (barra superior de la ventana única) ── */
+
+QPushButton#btnInicio, QPushButton#btnVolver {{
+    background-color: {C.SUPERFICIE};
+    color: {C.TEXTO};
+    border: 1px solid {C.BORDE};
+    border-radius: 10px;
+    padding: 6px 14px 6px 10px;
+    font-size: {fs(13)}px;
+    font-weight: 700;
+}}
+
+QPushButton#btnInicio:hover, QPushButton#btnVolver:hover {{
+    background-color: {C.ACENTO_SUAVE};
+    border-color: {C.ACENTO_BORDE};
+}}
+
+QPushButton#btnInicio:pressed, QPushButton#btnVolver:pressed {{
+    background-color: {C.ACENTO_BORDE};
+}}
+
+/* Anillo de foco: visible al navegar con teclado (Tab) */
+QPushButton#btnInicio:focus, QPushButton#btnVolver:focus {{
+    border: 2px solid {C.ACENTO};
+    padding: 5px 13px 5px 9px;
+}}
+
 QPushButton#btnEliminarCurso {{
     background: transparent;
     border: none;

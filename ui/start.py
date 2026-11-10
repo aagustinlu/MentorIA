@@ -1,30 +1,35 @@
 import sys
 from PyQt6.QtWidgets import (QApplication, QWidget, QHBoxLayout,
                              QVBoxLayout, QLabel, QPushButton, QLineEdit)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap
 from services.database import BaseDatosProyecto
 from ui.theme import primario, rol, tarjeta
 
 
 
-class VentanaInicial(QWidget):
+class PantallaRegistro(QWidget):
+    """Pantalla de bienvenida/registro. Vive dentro de la ventana única:
+    al registrarse emite `registrado(nombre)` y la ventana principal pasa al inicio."""
+
+    registrado = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
         self.iniciar_ui()
 
     def iniciar_ui(self):
-        self.setWindowTitle("MentorIA")
-        self.setWindowIcon(QIcon("./files/img/Mentoria Logo.png"))
-        self.resize(480, 500)
-
         # Layout exterior: centra una tarjeta sobre el fondo
         exterior = QVBoxLayout(self)
         exterior.setContentsMargins(28, 28, 28, 28)
 
         self.card = QWidget()
         tarjeta(self.card)
-        exterior.addWidget(self.card)
+        self.card.setFixedWidth(440)
+        self.card.setMaximumHeight(520)
+        exterior.addStretch(1)
+        exterior.addWidget(self.card, 0, Qt.AlignmentFlag.AlignHCenter)
+        exterior.addStretch(1)
 
         layout = QVBoxLayout(self.card)
         layout.setContentsMargins(32, 30, 32, 28)
@@ -106,19 +111,17 @@ class VentanaInicial(QWidget):
         ruta_base_datos = "storage/sistema_estudios.db"
         db = BaseDatosProyecto(ruta_base_datos)
 
-        ok = db.registrar_usuario(nombre, token)
-        if ok:
-            # Import local para evitar dependencias circulares en imports
-            from ui.main_window import VentanaPrincipal
-            self.ventana_principal = VentanaPrincipal(nombre)
-            self.ventana_principal.show()
-            self.close()
+        if db.registrar_usuario(nombre, token):
+            self.registrado.emit(nombre)
 
 if __name__ == "__main__":
     from ui.theme import aplicar_tema
 
     app = QApplication(sys.argv)
     aplicar_tema(app)
-    ventana = VentanaInicial()
+    ventana = PantallaRegistro()
+    ventana.setWindowTitle("MentorIA")
+    ventana.setWindowIcon(QIcon("./files/img/Mentoria Logo.png"))
+    ventana.resize(920, 640)
     ventana.show()
     sys.exit(app.exec())

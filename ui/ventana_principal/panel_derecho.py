@@ -32,10 +32,8 @@ if str(PROJECT_ROOT) not in sys.path:
 from ui.cursos.crear_curso_menu import CampoEntrada
 from ui.theme import Colores as C, fs, gestor_tema, primario, rol
 from services.database import BaseDatosProyecto
-from ui.cursos.curso import CursoMenu
 
-# Ícono de tacho dibujado como vector: se ve nítido a cualquier tamaño y no
-# arrastra fondo de color como una captura.
+
 _SVG_TACHO = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
      stroke="{color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
   <path d="M3 6h18"/>
@@ -55,7 +53,6 @@ def icono_tacho(color: str, lado: int = 18) -> QIcon:
     renderer.render(painter, QRectF(0, 0, lado, lado))
     painter.end()
     return QIcon(pixmap)
-
 
 
 class BotonTacho(QPushButton):
@@ -112,7 +109,7 @@ class BotonTacho(QPushButton):
     def hideEvent(self, event):
         self.setIcon(icono_tacho(self._reposo, self.ICONO))
         super().hideEvent(event)
-        
+
 
 class FilaCurso(QWidget):
     """Fila de un curso: el título y un tacho que solo aparece con el mouse encima."""
@@ -204,6 +201,9 @@ class DelegadoFilaCurso(QStyledItemDelegate):
         
 class PanelDerecho(QWidget):
     ALTO_FILA_CURSO = 48
+
+    # Pide a la ventana principal que muestre la pantalla de un curso
+    curso_solicitado = pyqtSignal(object)
 
     def __init__(self, db: BaseDatosProyecto):
         super().__init__()
@@ -304,23 +304,13 @@ class PanelDerecho(QWidget):
             )
             return
 
-        # Si el curso eliminado estaba abierto, se cierra junto con sus lecciones
-        abierto = getattr(self, "_curso_menu_abierto", None)
-        if abierto is not None and getattr(abierto.curso_model, "id", None) == curso_id:
-            abierto.close()
-            self._curso_menu_abierto = None
-
         self.cargar_cursos()
         self._refrescar_progreso()
 
     def _mostrar_curso_menu(self, curso) -> bool:
-        """Abre la ventana del curso. Devuelve True si se abrió bien."""
+        """Pide mostrar la pantalla del curso. Devuelve True si se pudo abrir."""
         try:
-            # * Guardar referencia para evitar que el widget se destruya por GC
-            self._curso_menu_abierto = CursoMenu(curso)
-            # Cada lección completada actualiza los contadores del inicio
-            self._curso_menu_abierto.progreso_cambiado.connect(self._refrescar_progreso)
-            self._curso_menu_abierto.show()
+            self.curso_solicitado.emit(curso)
             return True
 
         except Exception as e:

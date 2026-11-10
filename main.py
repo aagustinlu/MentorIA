@@ -4,11 +4,10 @@ from PyQt6.QtCore import Qt, QCoreApplication
 import sys
 
 from services.database import BaseDatosProyecto
-from ui.start import VentanaInicial
 from ui.ventana_principal import VentanaPrincipal
 from ui.theme import TEMA_POR_DEFECTO, aplicar_tema
 
-
+ 
 # Configurar Qt antes de crear QApplication
 QCoreApplication.setAttribute(
     Qt.ApplicationAttribute.AA_ShareOpenGLContexts
@@ -24,13 +23,9 @@ def main():
     app = QApplication(sys.argv)
     aplicar_tema(app, tema_guardado)
 
-    if usuario_existente:
-        nombre, _token = usuario_existente
-        ventana = VentanaPrincipal(nombre)
-    else:
-        ventana = VentanaInicial()
-
-    
+    # Una sola ventana: si aún no hay perfil, muestra el registro dentro de ella
+    nombre = usuario_existente[0] if usuario_existente else None
+    ventana = VentanaPrincipal(nombre)
     ventana.show()
     sys.exit(app.exec())
 

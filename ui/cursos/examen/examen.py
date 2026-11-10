@@ -20,7 +20,7 @@ import sys
 from functools import partial
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
@@ -50,6 +50,8 @@ from .widgets.utiles import crear_scroll, vaciar
 
 
 class ExamenMenu(QWidget):
+    # Pide a la ventana principal volver al mapa del curso
+    salir_pedido = pyqtSignal()
 
     def __init__(self, examen: ExamenModel, estado: dict | None = None, on_finalizar=None,
                  on_nuevo_examen=None, on_certificado=None):
@@ -59,7 +61,7 @@ class ExamenMenu(QWidget):
         on_finalizar:    callable(ResultadoExamen) -> bool que persiste el intento
                          y actualiza el progreso del curso.
         on_nuevo_examen: callable() que genera un examen nuevo (preguntas distintas)
-                         y reemplaza esta ventana. Si es None, «Reintentar» repite
+                         y reemplaza esta pantalla. Si es None, «Reintentar» repite
                          las mismas preguntas.
         on_certificado:  callable(parent_widget) que guarda el certificado del curso.
                          Si es None, no se muestra el botón de certificado.
@@ -89,11 +91,8 @@ class ExamenMenu(QWidget):
     # ------------------------------------------------------
 
     def iniciar_ui(self):
-        self.setWindowTitle(self.examen.titulo)
-        self.resize(720, 600)
-
         layout_principal = QVBoxLayout(self)
-        layout_principal.setContentsMargins(20, 20, 20, 16)
+        layout_principal.setContentsMargins(0, 0, 0, 0)
         layout_principal.setSpacing(14)
 
         self.pagina_resultados = PaginaResultados()
@@ -115,7 +114,7 @@ class ExamenMenu(QWidget):
         self.barra.btn_siguiente.clicked.connect(self.siguiente_o_finalizar)
         self.barra.btn_reintentar.clicked.connect(self._reintentar)
         self.barra.btn_certificado.clicked.connect(self._descargar_certificado)
-        self.barra.btn_cerrar.clicked.connect(self.close)
+        self.barra.btn_cerrar.clicked.connect(self._pedir_salir)
 
         layout_principal.addWidget(self.tarjeta_examen, 1)
         layout_principal.addLayout(self.barra)
@@ -274,8 +273,12 @@ class ExamenMenu(QWidget):
     # Cierre
     # ------------------------------------------------------
 
-    def closeEvent(self, event):
-        # Evita perder un intento a medias por cerrar la ventana sin querer
+    def puede_salir(self) -> bool:
+        """Evita perder un intento a medias por salir sin querer.
+
+        La ventana principal lo consulta antes de cambiar de pantalla
+        (botón «Inicio», «Volver» o cierre de la aplicación).
+        """
         if self._en_curso and self.sesion is not None and self.sesion.respuestas:
             respuesta = QMessageBox.question(
                 self,
@@ -284,10 +287,12 @@ class ExamenMenu(QWidget):
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
-            if respuesta != QMessageBox.StandardButton.Yes:
-                event.ignore()
-                return
-        super().closeEvent(event)
+            return respuesta == QMessageBox.StandardButton.Yes
+        return True
+
+    def _pedir_salir(self, _checked: bool = False) -> None:
+        if self.puede_salir():
+            self.salir_pedido.emit()
 
 
 # ==========================================================
@@ -326,5 +331,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     aplicar_tema(app)
     ventana = ExamenMenu(demo, on_finalizar=lambda resultado: True)
+    ventana.resize(720, 600)
     ventana.show()
     sys.exit(app.exec())

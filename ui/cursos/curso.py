@@ -349,6 +349,9 @@ class PanelDerecho(QGraphicsView):
     leccion_completada = pyqtSignal()
     # Se emite cada vez que se registra un intento de la evaluación final
     examen_actualizado = pyqtSignal()
+    # Piden a la ventana principal mostrar / quitar una pantalla (lección o examen)
+    pantalla_solicitada = pyqtSignal(object, str)   # widget, título para las migas
+    pantalla_quitada = pyqtSignal(object)
 
     def __init__(self, lecciones: list[dict], db=None, curso_id=None):
         super().__init__()
@@ -363,19 +366,14 @@ class PanelDerecho(QGraphicsView):
         self.setScene(self.escena)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        self.setGeometry(100, 100, 600, 600)
-        self.setWindowTitle("Nodos Circulares en PyQt6")
-
         self.nodo_activo: NodoCircular | None = None
         self.nodos: list[NodoCircular] = []
 
-        # Referencia a ventanas de lección abiertas (evita que el GC las destruya)
-        self._ventanas_leccion: list = []
         # Worker activo
         self._worker: GenerarLeccionWorker | None = None
         # Diálogo de progreso
         self._progreso: QProgressDialog | None = None
-        # Ventana de la evaluación final (solo se permite una abierta)
+        # Pantalla de la evaluación final abierta (para reemplazarla al reintentar)
         self._ventana_examen = None
 
         self.crear_camino_nodos()
@@ -556,8 +554,10 @@ class PanelDerecho(QGraphicsView):
 
     def _mostrar_progreso(self, texto: str):
         """Muestra el diálogo de espera mientras la IA trabaja en segundo plano."""
+        # Se ancla a la ventana principal: este mapa puede estar oculto (p. ej. al
+        # generar un examen nuevo mientras se ve el examen anterior).
         self._progreso = QProgressDialog(
-            texto, None, 0, 0, self
+            texto, None, 0, 0, self.window()
         )
         self._progreso.setWindowTitle("Por favor espera")
         self._progreso.setWindowModality(Qt.WindowModality.WindowModal)
@@ -589,22 +589,21 @@ class PanelDerecho(QGraphicsView):
         QMessageBox.critical(self, "Error al generar lección", mensaje)
 
     def _mostrar_leccion(self, leccion_model):
-        """Instancia y muestra la ventana LeccionMenu."""
+        """Instancia la pantalla LeccionMenu y la muestra en la ventana principal."""
         from ui.cursos.leccion.leccion import LeccionMenu
 
         estado = self._estado_por_id.get(leccion_model.id, "locked")
         if estado == "locked":
             return  # nunca se muestra una lección bloqueada
 
-        ventana = LeccionMenu(
+        pantalla = LeccionMenu(
             leccion_model,
             estado=estado,
             on_completar=self._completar_leccion,
         )
-        ventana.setWindowTitle(f"Lección: {leccion_model.titulo}")
-        ventana.show()
-        # Guardamos referencia para que Qt no destruya la ventana
-        self._ventanas_leccion.append(ventana)
+        # Al completar la lección se vuelve al mapa del curso
+        pantalla.salir_pedido.connect(lambda p=pantalla: self.pantalla_quitada.emit(p))
+        self.pantalla_solicitada.emit(pantalla, f"Lección: {leccion_model.titulo}")
 
     def _completar_leccion(self, leccion_id) -> bool:
         """
@@ -648,11 +647,6 @@ class PanelDerecho(QGraphicsView):
         if self.db is None or self.curso_id is None:
             return
 
-        if self._ventana_examen is not None and self._ventana_examen.isVisible():
-            self._ventana_examen.raise_()
-            self._ventana_examen.activateWindow()
-            return
-
         examen = self.db.obtener_examen(self.curso_id)
         if examen is None:
             self._generar_examen()
@@ -686,13 +680,11 @@ class PanelDerecho(QGraphicsView):
             QMessageBox.critical(self, "Error", "No se pudo generar la evaluación final.")
             return
 
-        # Si venía de una ventana de examen (reintento tras fallar), se cierra la vieja
+        # Si venía de la pantalla de un examen (reintento tras fallar), se quita la vieja
         # solo ahora que la nueva ya está lista.
         anterior = self._ventana_examen
         if anterior is not None:
-            anterior.close()
-            if anterior in self._ventanas_leccion:
-                self._ventanas_leccion.remove(anterior)
+            self.pantalla_quitada.emit(anterior)
             self._ventana_examen = None
 
         self._mostrar_examen(examen)
@@ -704,7 +696,7 @@ class PanelDerecho(QGraphicsView):
     def _mostrar_examen(self, examen):
         from ui.cursos.examen.examen import ExamenMenu
 
-        ventana = ExamenMenu(
+        pantalla = ExamenMenu(
             examen,
             estado=self.db.obtener_estado_examen(self.curso_id),
             on_finalizar=lambda resultado, examen_id=examen.id: self._finalizar_examen(
@@ -713,10 +705,15 @@ class PanelDerecho(QGraphicsView):
             on_nuevo_examen=lambda: self._generar_examen(renovar=True),
             on_certificado=lambda parent: descargar_certificado(parent, self.db, self.curso_id),
         )
-        ventana.show()
-        self._ventana_examen = ventana
-        # Se cierra junto con el curso, igual que las lecciones
-        self._ventanas_leccion.append(ventana)
+        # «Volver al curso» (tras confirmar si hay un intento a medias)
+        pantalla.salir_pedido.connect(lambda p=pantalla: self._cerrar_examen(p))
+        self._ventana_examen = pantalla
+        self.pantalla_solicitada.emit(pantalla, "Evaluación final")
+
+    def _cerrar_examen(self, pantalla):
+        if self._ventana_examen is pantalla:
+            self._ventana_examen = None
+        self.pantalla_quitada.emit(pantalla)
 
     def _finalizar_examen(self, examen_id, resultado) -> bool:
         """Guarda el intento. Si se aprobó, el curso queda completado y se redibuja el mapa."""
@@ -747,6 +744,9 @@ class PanelDerecho(QGraphicsView):
 class CursoMenu(QWidget):
     # Avisa a la ventana principal para que actualice el progreso del inicio
     progreso_cambiado = pyqtSignal()
+    # Reenvían a la ventana principal las pantallas que abre el mapa
+    pantalla_solicitada = pyqtSignal(object, str)
+    pantalla_quitada = pyqtSignal(object)
 
     def __init__(self, curso, db=None):
         super().__init__()
@@ -766,12 +766,8 @@ class CursoMenu(QWidget):
         self.iniciar_ui()
 
     def iniciar_ui(self):
-        self.setWindowTitle(f"Curso: {self.titulo}")
-        self.setWindowIcon(QIcon(str(ruta_logo)))
-        self.resize(860, 600)
-
         layout_principal = QHBoxLayout()
-        layout_principal.setContentsMargins(20, 20, 20, 20)
+        layout_principal.setContentsMargins(0, 0, 0, 0)
         layout_principal.setSpacing(18)
         self.layout_izquierdo = PanelIzquierdo(self.curso_model)
 
@@ -792,6 +788,8 @@ class CursoMenu(QWidget):
         )
         self.layout_derecho.leccion_completada.connect(self.progreso_cambiado)
         self.layout_derecho.examen_actualizado.connect(self.progreso_cambiado)
+        self.layout_derecho.pantalla_solicitada.connect(self.pantalla_solicitada)
+        self.layout_derecho.pantalla_quitada.connect(self.pantalla_quitada)
 
         # Botón de certificado: aparece cuando el examen final está aprobado
         self.layout_izquierdo.certificado_solicitado.connect(self._descargar_certificado)
@@ -813,12 +811,6 @@ class CursoMenu(QWidget):
     def _descargar_certificado(self) -> None:
         descargar_certificado(self, self.db, self.curso_model.id)
 
-    def closeEvent(self, event):
-        # Al cerrar el curso se cierran también las lecciones que abrió
-        for ventana in self.layout_derecho._ventanas_leccion:
-            ventana.close()
-        super().closeEvent(event)
-
 
 # ── Prueba standalone ─────────────────────────────────────────────────────────
 
@@ -839,5 +831,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     aplicar_tema(app)
     ventana = CursoMenu(curso_dict)
+    ventana.setWindowTitle("Curso")
+    ventana.resize(860, 600)
     ventana.show()
     sys.exit(app.exec())

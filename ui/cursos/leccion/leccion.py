@@ -15,8 +15,7 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QMessageBox,
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import Qt, pyqtSignal
 
 # Asegura que la raíz del proyecto esté en sys.path
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -39,13 +38,13 @@ from ui.cursos.leccion.widgets import (
     WidgetFormula,
 )
 
-ruta_logo = PROJECT_ROOT / "files" / "img" / "Mentoria Logo.png"
-
 # ==========================================================
 # Menú principal de la lección
 # ==========================================================
 
 class LeccionMenu(QWidget):
+    # Pide a la ventana principal volver a la pantalla anterior (el mapa del curso)
+    salir_pedido = pyqtSignal()
 
     def __init__(self, leccion_model, estado="completed", on_completar=None):
         """
@@ -67,15 +66,8 @@ class LeccionMenu(QWidget):
         self.iniciar_ui()
 
     def iniciar_ui(self):
-        self.setWindowTitle("Ejemplo")
-        self.setWindowIcon(QIcon(str(ruta_logo)))
-
-        # Tamaño inicial de la ventana
-        self.resize(720, 580)
-        self.setMaximumHeight(700)
-
         layout_principal = QVBoxLayout(self)
-        layout_principal.setContentsMargins(20, 20, 20, 16)
+        layout_principal.setContentsMargins(0, 0, 0, 0)
         layout_principal.setSpacing(14)
 
         # Pila de páginas (dentro de una tarjeta, como una hoja de lectura)
@@ -217,8 +209,8 @@ class LeccionMenu(QWidget):
 
         if self.on_completar(self.LeccionModel.id):
             self.estado = "completed"
-            # Al completar, la ventana se cierra para agilizar el flujo
-            self.close()
+            # Al completar se vuelve al mapa del curso para agilizar el flujo
+            self.salir_pedido.emit()
         else:
             QMessageBox.warning(
                 self,

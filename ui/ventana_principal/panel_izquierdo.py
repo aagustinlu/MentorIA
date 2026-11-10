@@ -171,8 +171,6 @@ class PanelIzquierdo(QWidget):
         )
 
         return layout
-
-        
     
     @staticmethod
     def _cantidad(n: int, singular: str, plural: str) -> str:

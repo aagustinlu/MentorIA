@@ -30,7 +30,7 @@ class BarraInferior(QHBoxLayout):
         primario(self.btn_reintentar)
 
         self.btn_certificado = QPushButton("Descargar certificado")
-        self.btn_cerrar = QPushButton("Cerrar")
+        self.btn_cerrar = QPushButton("Volver al curso")
 
         botones = (
             self.btn_comenzar, self.btn_anterior, self.btn_siguiente,
@@ -43,6 +43,7 @@ class BarraInferior(QHBoxLayout):
         self.btn_siguiente.setMinimumWidth(150)
         self.btn_reintentar.setMinimumWidth(240)
         self.btn_certificado.setMinimumWidth(200)
+        self.btn_cerrar.setMinimumWidth(150)
 
         self.setSpacing(12)
         self.addStretch()
