@@ -28,6 +28,7 @@ from ui.ventana_principal.panel_izquierdo import PanelIzquierdo
 from ui.ventana_principal.panel_derecho import PanelDerecho
 from ui.navegacion import BarraNavegacion
 from ui.cursos.curso import CursoMenu
+from ui.start import PantallaRegistro
 
 class PantallaInicio(QWidget):
     """Pantalla de inicio: panel con tu progreso y la lista de cursos."""
