@@ -7,8 +7,10 @@ from pathlib import Path
 
 from PyQt6.QtGui import QFont, QFontDatabase
 
+from .resolver_rutas import resolver_ruta_recurso
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+PROJECT_ROOT = Path(resolver_ruta_recurso("")) 
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -22,7 +24,7 @@ if str(PROJECT_ROOT) not in sys.path:
 # - Fuentes del sistema: alternativas adicionales.
 # ==========================================================
 
-CARPETA_FUENTES = PROJECT_ROOT / "files" / "fonts"
+CARPETA_FUENTES = Path(resolver_ruta_recurso("files/fonts"))
 
 
 # ── SpaceGrotesk ────────────────────────────────────────────────
@@ -48,7 +50,7 @@ ARCHIVOS_JAPONES = (
 
 # Conservamos la ubicación original de tu fuente variable.
 FUENTE_JAPONESA_PATH = (
-    PROJECT_ROOT / "files" / "NotoSansJP-VariableFont_wght.ttf"
+    resolver_ruta_recurso("files/fonts/NotoSansJP-VF.ttf")
 )
 
 FUENTE_JAPONESA_NOMBRE = "Noto Sans JP"

@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (QApplication, QWidget, QHBoxLayout,
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap
 from services.database import BaseDatosProyecto
+from services.resolver_rutas import resolver_ruta_recurso
 from ui.theme import primario, rol, tarjeta
 
 
@@ -21,24 +22,24 @@ class PantallaRegistro(QWidget):
     def iniciar_ui(self):
         # Layout exterior: centra una tarjeta sobre el fondo
         exterior = QVBoxLayout(self)
-        exterior.setContentsMargins(28, 28, 28, 28)
+        exterior.setContentsMargins(20, 16, 20, 16)
 
         self.card = QWidget()
         tarjeta(self.card)
         self.card.setFixedWidth(440)
-        self.card.setMaximumHeight(520)
+        self.card.setMaximumHeight(440)
         exterior.addStretch(1)
         exterior.addWidget(self.card, 0, Qt.AlignmentFlag.AlignHCenter)
         exterior.addStretch(1)
 
         layout = QVBoxLayout(self.card)
-        layout.setContentsMargins(32, 30, 32, 28)
-        layout.setSpacing(6)
+        layout.setContentsMargins(32, 22, 32, 22)
+        layout.setSpacing(5)
 
         self.logo_label = QLabel()
-        logo = QPixmap("./files/img/Mentoria Logotipo.png")
+        ruta_logo = resolver_ruta_recurso("files/img/Mentoria Logotipo.png")
+        logo = QPixmap(ruta_logo)
         self.logo_label.setPixmap(logo.scaledToWidth(130, Qt.TransformationMode.SmoothTransformation))
-        self.logo_label.setScaledContents(True) 
         
         self.titulo = QLabel("Bienvenido a MentorIA")
         rol(self.titulo, "titulo")
@@ -54,7 +55,8 @@ class PantallaRegistro(QWidget):
 
         self.text_tok = QLabel("Tu token")
         rol(self.text_tok, "subtitulo")
-        self.text_ayuda_token = QLabel("¿Cómo conseguir tu token?")
+        self.text_ayuda_token = QLabel('<a href="https://www.kerlig.com/help/integrations/groq/get-api-key">¿Cómo conseguir tu token?</a>', self)
+        self.text_ayuda_token.setOpenExternalLinks(True)
         rol(self.text_ayuda_token, "enlace")
 
         self.ingresar_token = QLineEdit()
@@ -121,7 +123,8 @@ if __name__ == "__main__":
     aplicar_tema(app)
     ventana = PantallaRegistro()
     ventana.setWindowTitle("MentorIA")
-    ventana.setWindowIcon(QIcon("./files/img/Mentoria Logo.png"))
+    ruta_icono = resolver_ruta_recurso("files/img/Mentoria Logo.png")
+    ventana.setWindowIcon(QIcon(ruta_logo))
     ventana.resize(920, 640)
     ventana.show()
     sys.exit(app.exec())

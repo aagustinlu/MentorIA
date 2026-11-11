@@ -65,6 +65,4 @@ class CrearCursoController:
 
         # Curso + lecciones en una sola transacción
         curso.id = self.repo_cursos.guardar(curso)
-        print(f"[CrearCursoController] Curso guardado con id={curso.id}, "
-              f"{len(lecciones)} lecciones.")
         return curso

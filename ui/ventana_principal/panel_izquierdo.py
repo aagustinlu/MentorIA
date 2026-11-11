@@ -21,7 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from ui.popup import Configuraciones
 from ui.theme import Colores as C, al_cambiar_tema, fs, rol, tarjeta
 from services.database import BaseDatosProyecto
-
+from services.resolver_rutas import resolver_ruta_recurso
 
 
 class PanelIzquierdo(QWidget):
@@ -149,7 +149,8 @@ class PanelIzquierdo(QWidget):
             QSizePolicy.Policy.Fixed
         )
 
-        logo = QPixmap("./files/img/Mentoria Logotipo.png")
+        ruta_logo = resolver_ruta_recurso("files/img/Mentoria Logotipo.png")
+        logo = QPixmap(ruta_logo)
 
         if not logo.isNull():
 

@@ -24,6 +24,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from services.database import BaseDatosProyecto
+from services.resolver_rutas import resolver_ruta_recurso
 from ui.ventana_principal.panel_izquierdo import PanelIzquierdo
 from ui.ventana_principal.panel_derecho import PanelDerecho
 from ui.navegacion import BarraNavegacion
@@ -84,6 +85,9 @@ class VentanaPrincipal(QWidget):
     Salvo en el inicio, arriba se muestra la barra de navegación con el botón
     «Volver al inicio».
     """
+    
+    TAMANO_START = (650, 480)
+    TAMANO_INICIO = (920, 640)
 
     def __init__(self, nombre: str | None = None):
         super().__init__()
@@ -110,9 +114,10 @@ class VentanaPrincipal(QWidget):
 
     def iniciar_ui(self):
         self.setWindowTitle("MentorIA")
-        self.setWindowIcon(QIcon("./files/img/Mentoria Logo.png"))
-        self.resize(920, 640)
-        self.setMinimumSize(760, 540)
+        ruta_icono = resolver_ruta_recurso("files/img/Mentoria Logo.png")
+        self.setWindowIcon(QIcon(ruta_icono))
+        self.resize(*self.TAMANO_INICIO)
+        self.setMinimumSize(600, 450)
 
         self.barra = BarraNavegacion()
         self.barra.inicio_solicitado.connect(self.ir_a_inicio)
@@ -127,12 +132,25 @@ class VentanaPrincipal(QWidget):
         layout.addWidget(self.barra)
         layout.addWidget(self.pila, 1)
 
+    def centrar_ventana(self):
+        pantalla = self.screen().availableGeometry()
+        ventana = self.frameGeometry()
+
+        ventana.moveCenter(pantalla.center())
+        self.move(ventana.topLeft())
+    
     def _mostrar_registro(self):
         self.pantalla_registro = PantallaRegistro()
         self.pantalla_registro.registrado.connect(self._tras_registro)
+
         self.pila.addWidget(self.pantalla_registro)
         self.pila.setCurrentWidget(self.pantalla_registro)
+
         self.barra.hide()
+
+        # Ventana más pequeña para el registro
+        self.resize(*self.TAMANO_START)
+        self.centrar_ventana()
 
     def _tras_registro(self, nombre: str):
         registro, self.pantalla_registro = self.pantalla_registro, None
@@ -144,9 +162,18 @@ class VentanaPrincipal(QWidget):
     def _mostrar_inicio(self, nombre: str):
         self.pantalla_inicio = PantallaInicio(nombre, self.db)
         self.panel_izquierdo = self.pantalla_inicio.panel_izquierdo
-        self.pantalla_inicio.panel_derecho.curso_solicitado.connect(self.mostrar_curso)
+
+        self.pantalla_inicio.panel_derecho.curso_solicitado.connect(
+            self.mostrar_curso
+        )
+
         self.pila.addWidget(self.pantalla_inicio)
         self.pila.setCurrentWidget(self.pantalla_inicio)
+
+        # Restaurar dimensiones de la pantalla principal
+        self.resize(*self.TAMANO_INICIO)
+        self.centrar_ventana() 
+
         self._actualizar_barra()
 
     # ── Navegación ────────────────────────────────────────────────────────
