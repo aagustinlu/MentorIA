@@ -4,7 +4,7 @@ Generación del certificado de finalización en PDF.
 Sin dependencias de interfaz ni de base de datos: recibe un `CertificadoModel`
 y escribe un PDF A4 horizontal. Usa reportlab (`pip install reportlab`).
 
-Tipografías: Plus Jakarta Sans (ya incluida en files/fonts). Si el nombre o el
+Tipografías: Plus Jakarta Sans (ya incluida en assets/fonts). Si el nombre o el
 título del curso tienen caracteres japoneses/chinos, esa línea se dibuja con
 Noto Sans JP, que también viene en el proyecto. Si falta algún archivo de
 fuente se cae a Helvetica en lugar de fallar.
@@ -25,8 +25,8 @@ from models.models import CertificadoModel
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-CARPETA_FUENTES = PROJECT_ROOT / "files" / "fonts"
-RUTA_LOGOTIPO = PROJECT_ROOT / "files" / "img" / "Mentoria Logotipo.png"
+CARPETA_FUENTES = PROJECT_ROOT / "assets" / "fonts"
+RUTA_LOGOTIPO = PROJECT_ROOT / "assets" / "img" / "Mentoria Logotipo.png"
 
 
 # ==========================================================

@@ -114,7 +114,7 @@ class VentanaPrincipal(QWidget):
 
     def iniciar_ui(self):
         self.setWindowTitle("MentorIA")
-        ruta_icono = resolver_ruta_recurso("files/img/Mentoria Logo.png")
+        ruta_icono = resolver_ruta_recurso("assets/img/Mentoria Logo.png")
         self.setWindowIcon(QIcon(ruta_icono))
         self.resize(*self.TAMANO_INICIO)
         self.setMinimumSize(600, 450)

@@ -473,10 +473,6 @@ Genera exactamente {total} preguntas con esta distribución:
         return esquema
 
     def _preparar_material(self, fuente: str, ruta: str | None = None) -> str:
-        """
-        Combina el texto ingresado por el usuario con el texto extraído de
-        un archivo local. Groq no usa `client.files.upload` como Gemini.
-        """
         partes = []
 
         if fuente and fuente.strip():

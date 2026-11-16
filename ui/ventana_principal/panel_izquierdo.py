@@ -149,7 +149,7 @@ class PanelIzquierdo(QWidget):
             QSizePolicy.Policy.Fixed
         )
 
-        ruta_logo = resolver_ruta_recurso("files/img/Mentoria Logotipo.png")
+        ruta_logo = resolver_ruta_recurso("assets/img/Mentoria Logotipo.png")
         logo = QPixmap(ruta_logo)
 
         if not logo.isNull():

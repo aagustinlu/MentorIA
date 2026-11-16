@@ -32,7 +32,7 @@ from models.models import CursoModel, LeccionModel
 from ui.theme import Colores as C, al_cambiar_tema, fs, primario, rol, tarjeta
 from ui.cursos.certificado_ui import descargar_certificado
 
-ruta_logo = PROJECT_ROOT / "files" / "img" / "Mentoria Logo.png"
+ruta_logo = PROJECT_ROOT / "assets" / "img" / "Mentoria Logo.png"
 
 def _parsear_curso_para_ui(curso_data) -> CursoModel:
     """Normaliza datos (dict o CursoModel) al esquema de dominio."""

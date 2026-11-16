@@ -24,7 +24,7 @@ if str(PROJECT_ROOT) not in sys.path:
 # - Fuentes del sistema: alternativas adicionales.
 # ==========================================================
 
-CARPETA_FUENTES = Path(resolver_ruta_recurso("files/fonts"))
+CARPETA_FUENTES = Path(resolver_ruta_recurso("assets/fonts"))
 
 
 # ── SpaceGrotesk ────────────────────────────────────────────────
@@ -50,7 +50,7 @@ ARCHIVOS_JAPONES = (
 
 # Conservamos la ubicación original de tu fuente variable.
 FUENTE_JAPONESA_PATH = (
-    resolver_ruta_recurso("files/fonts/NotoSansJP-VF.ttf")
+    resolver_ruta_recurso("assets/fonts/NotoSansJP-VF.ttf")
 )
 
 FUENTE_JAPONESA_NOMBRE = "Noto Sans JP"

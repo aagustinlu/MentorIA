@@ -20,7 +20,6 @@ class PantallaRegistro(QWidget):
         self.iniciar_ui()
 
     def iniciar_ui(self):
-        # Layout exterior: centra una tarjeta sobre el fondo
         exterior = QVBoxLayout(self)
         exterior.setContentsMargins(20, 16, 20, 16)
 
@@ -37,8 +36,8 @@ class PantallaRegistro(QWidget):
         layout.setSpacing(5)
 
         self.logo_label = QLabel()
-        ruta_logo = resolver_ruta_recurso("files/img/Mentoria Logotipo.png")
-        logo = QPixmap(ruta_logo)
+        self.ruta_logo = resolver_ruta_recurso("assets/img/Mentoria Logotipo.png")
+        logo = QPixmap(self.ruta_logo)
         self.logo_label.setPixmap(logo.scaledToWidth(130, Qt.TransformationMode.SmoothTransformation))
         
         self.titulo = QLabel("Bienvenido a MentorIA")
@@ -123,8 +122,8 @@ if __name__ == "__main__":
     aplicar_tema(app)
     ventana = PantallaRegistro()
     ventana.setWindowTitle("MentorIA")
-    ruta_icono = resolver_ruta_recurso("files/img/Mentoria Logo.png")
-    ventana.setWindowIcon(QIcon(ruta_logo))
+    ventana.ruta_icono = resolver_ruta_recurso("assets/img/Mentoria Logo.png")
+    ventana.setWindowIcon(QIcon(ventana.ruta_icono))
     ventana.resize(920, 640)
     ventana.show()
     sys.exit(app.exec())

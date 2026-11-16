@@ -506,7 +506,7 @@ class VentanaPrincipal(QWidget):
 
     def iniciar_ui(self):
         self.setWindowTitle("MentorIA")
-        self.setWindowIcon(QIcon("./files/img/Mentoria Logo.png"))
+        self.setWindowIcon(QIcon("./assets/img/Mentoria Logo.png"))
         self.resize(820, 540)
 
         perfil = self.db.obtener_perfil()
@@ -533,7 +533,7 @@ class VentanaPrincipal(QWidget):
         self.logo_label.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
         )
-        logo = QPixmap("./files/img/Mentoria Logotipo.png")
+        logo = QPixmap("./assets/img/Mentoria Logotipo.png")
         if not logo.isNull():
             dpr = self.devicePixelRatioF()
             logo = logo.scaledToWidth(
